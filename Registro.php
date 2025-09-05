@@ -35,10 +35,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <style>
+    :root {
+      --verde: #008f4c;
+      --verde-oscuro: #006837;
+      --blanco: #ffffff;
+      --gris: #f4f4f4;
+      --acento: #e85c4a;
+    }
+
     body {
       margin: 0;
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #0f172a, #3b82f6);
+      background: linear-gradient(135deg, var(--gris), #c7f0d8, #e6f4ec);
       display: flex;
       justify-content: center;
       align-items: center;
@@ -49,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     .form-container {
-      background-color: #ffffff;
+      background-color: var(--blanco);
       padding: 1.0rem;
       border-radius: 1rem;
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
@@ -70,20 +78,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       transform: translateX(-50%);
       width: 60px;
       height: 60px;
-      background-color: #3b82f6;
+      background-color: var(--verde);
       border-radius: 50%;
       display: flex;
       justify-content: center;
       align-items: center;
-      color: white;
+      color: var(--blanco);
       font-size: 28px;
-      box-shadow: 0 0 10px rgba(59, 130, 246, 0.7);
-      border: 3px solid white;
+      box-shadow: 0 0 10px rgba(0, 143, 76, 0.7);
+      border: 3px solid var(--blanco);
     }
 
     .form-container h2 {
       font-size: 1.3rem;
-      color: #1f2937;
+      color: var(--verde-oscuro);
       margin-top: 3rem;
       margin-bottom: 1rem;
       text-align: center;
@@ -100,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .input-group label {
       display: block;
       font-size: 0.85rem;
-      color: #374151;
+      color: var(--verde-oscuro);
       margin-bottom: 0.25rem;
     }
 
@@ -116,14 +124,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     .input-group input:focus,
     .input-group select:focus {
-      border-color: #3b82f6;
+      border-color: var(--acento);
       outline: none;
     }
 
     .btn {
       width: 100%;
-      background-color: #3b82f6;
-      color: white;
+      background-color: var(--acento);
+      color: var(--blanco);
       font-weight: 600;
       border: none;
       padding: 0.6rem;
@@ -135,7 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     .btn:hover {
-      background-color: #2563eb;
+      background-color: #d94c3c;
       transform: scale(1.03);
     }
 
@@ -143,21 +151,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       margin-top: 0.6rem;
       text-align: center;
       font-weight: bold;
-      color: #ef4444;
+      color: var(--acento);
       font-size: 0.9rem;
     }
 
     p { margin-top: 1rem; }
 
     p a {
-      color: #3b82f6;
+      color: var(--verde);
       text-decoration: none;
       font-weight: 600;
       transition: color 0.3s ease;
     }
 
     p a:hover {
-      color: #2563eb;
+      color: var(--verde-oscuro);
       text-decoration: underline;
     }
 
@@ -171,7 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="avatar">
       <i class="fas fa-user"></i>
     </div>
-    <h2>Registro - Farmacia</h2>
+    <h2>Registro - Farvec</h2>
     <form method="POST">
       <div class="input-group">
         <label>Nombre:</label>
