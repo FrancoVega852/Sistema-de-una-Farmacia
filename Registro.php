@@ -1,29 +1,33 @@
 <?php
 include 'Conexion.php';
-include 'Usuario.php';
 
 $conn = new Conexion();
-$usuarioObj = new Usuario($conn->conexion);
-
 $mensaje = "";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nombre     = trim($_POST['nombre']);
-    $apellido   = trim($_POST['apellido']);
-    $dni        = trim($_POST['dni']);
-    $domicilio  = trim($_POST['domicilio']);
+    $apellido   = trim($_POST['apellido']); // en tu BD no hay campo "apellido"
+    $dni        = trim($_POST['dni']);      // tampoco hay "dni"
+    $domicilio  = trim($_POST['domicilio']); // ni "domicilio"
     $correo     = trim($_POST['correo']);
-    $telefono   = trim($_POST['telefono']);
+    $telefono   = trim($_POST['telefono']); // tampoco hay "telefono" en Usuario
     $contrasena = $_POST['contrasena'];
     $rol        = $_POST['rol']; // Cliente / Empleado / Farmaceutico / Administrador
 
-    [$ok, $err] = $usuarioObj->registrar($nombre, $apellido, $correo, $dni, $domicilio, $telefono, $contrasena, $rol);
+    // ⚠️ Tu tabla Usuario solo tiene: nombre, email, usuario, password, rol
+    $usuario_generado = strtolower(explode('@', $correo)[0]); 
 
-    if ($ok) {
+    $sql = "INSERT INTO Usuario (nombre, email, usuario, password, rol) VALUES (?, ?, ?, ?, ?)";
+    $stmt = $conn->conexion->prepare($sql);
+
+    $hash = password_hash($contrasena, PASSWORD_DEFAULT);
+    $stmt->bind_param("sssss", $nombre, $correo, $usuario_generado, $hash, $rol);
+
+    if ($stmt->execute()) {
         header("Location: login.php?registro=exitoso");
         exit();
     } else {
-        $mensaje = $err ?: "Error al registrar usuario.";
+        $mensaje = "Error al registrar usuario: " . $conn->conexion->error;
     }
 }
 ?>
@@ -36,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <style>
     :root {
-      --verde: #008f4c;        /* Verde fuerte */
+      --verde: #008f4c;        
       --verde-oscuro: #006837;
       --blanco: #ffffff;
       --gris: #f4f4f4;
@@ -57,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     .form-container {
-      background-color: var(--verde); /* ahora igual que login */
+      background-color: var(--verde);
       padding: 1.0rem;
       border-radius: 1rem;
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
