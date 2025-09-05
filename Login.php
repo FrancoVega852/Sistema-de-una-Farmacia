@@ -10,18 +10,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $correo = trim($_POST["correo"]);
     $contrasena = $_POST["contrasena"];
 
-    $usuario = $usuarioObj->login($correo, $contrasena);
+    // Ahora login busca en la tabla Usuario de tu base
+    $sql = "SELECT id, nombre, email, password, rol 
+            FROM Usuario 
+            WHERE email = ? 
+            LIMIT 1";
+    $stmt = $conn->conexion->prepare($sql);
+    $stmt->bind_param("s", $correo);
+    $stmt->execute();
+    $resultado = $stmt->get_result();
 
-    if ($usuario) {
-        $_SESSION["usuario_id"] = $usuario["id"];
-        $_SESSION["usuario_nombre"] = $usuario["nombre"];
-        $_SESSION["usuario_correo"] = $usuario["email"];
-        $_SESSION["usuario_rol"] = $usuario["rol"];
+    if ($resultado->num_rows === 1) {
+        $usuario = $resultado->fetch_assoc();
 
-        header("Location: menu.php");
-        exit;
+        if (password_verify($contrasena, $usuario["password"])) {
+            $_SESSION["usuario_id"] = $usuario["id"];
+            $_SESSION["usuario_nombre"] = $usuario["nombre"];
+            $_SESSION["usuario_correo"] = $usuario["email"];
+            $_SESSION["usuario_rol"] = $usuario["rol"];
+
+            header("Location: menu.php");
+            exit;
+        } else {
+            $error = "Contraseña incorrecta.";
+        }
     } else {
-        $error = "Correo o contraseña incorrectos.";
+        $error = "Correo no encontrado.";
     }
 }
 ?>
