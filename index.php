@@ -30,6 +30,7 @@ if (isset($_SESSION['usuario_id'])) {
       background: var(--gris);
       color: var(--texto);
       line-height: 1.6;
+      animation: fadeIn 1s ease-in-out;
     }
 
     /* ===== HEADER ===== */
@@ -39,6 +40,7 @@ if (isset($_SESSION['usuario_id'])) {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      animation: slideDown 1s ease;
     }
 
     .logo {
@@ -77,6 +79,7 @@ if (isset($_SESSION['usuario_id'])) {
       text-align: center;
       padding: 5rem 2rem;
       background: linear-gradient(135deg, #f9f9f9, #e6f4ec);
+      animation: fadeUp 1s ease;
     }
 
     .hero h2 {
@@ -99,13 +102,15 @@ if (isset($_SESSION['usuario_id'])) {
       font-weight: bold;
       font-size: 1rem;
       box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+      transition: transform 0.3s ease, background 0.3s ease;
     }
 
     .btn-login { background: var(--acento); color: var(--blanco); }
     .btn-registro { background: var(--verde); color: var(--blanco); }
 
-    .btn-login:hover { background: #d94c3c; }
-    .btn-registro:hover { background: #007a40; }
+    .btn-login:hover, .btn-registro:hover {
+      transform: scale(1.1) rotate(-1deg);
+    }
 
     /* ===== SECCIONES ===== */
     .seccion {
@@ -115,12 +120,14 @@ if (isset($_SESSION['usuario_id'])) {
       background: var(--blanco);
       border-radius: 10px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      animation: fadeIn 1s ease;
     }
 
     .seccion h2 {
       color: var(--verde-oscuro);
       margin-bottom: 1rem;
       font-size: 1.8rem;
+      animation: fadeUp 1.2s ease;
     }
 
     .funcionalidades {
@@ -136,13 +143,24 @@ if (isset($_SESSION['usuario_id'])) {
       text-align: center;
       font-weight: bold;
       color: var(--verde-oscuro);
-      transition: 0.3s;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeInUp 0.8s forwards;
     }
+
+    .card:nth-child(1) { animation-delay: 0.2s; }
+    .card:nth-child(2) { animation-delay: 0.4s; }
+    .card:nth-child(3) { animation-delay: 0.6s; }
+    .card:nth-child(4) { animation-delay: 0.8s; }
+    .card:nth-child(5) { animation-delay: 1s; }
+    .card:nth-child(6) { animation-delay: 1.2s; }
+    .card:nth-child(7) { animation-delay: 1.4s; }
+    .card:nth-child(8) { animation-delay: 1.6s; }
 
     .card:hover {
       background: var(--verde);
       color: var(--blanco);
-      transform: scale(1.05);
+      transform: scale(1.08);
     }
 
     /* ===== FOOTER ===== */
@@ -152,6 +170,33 @@ if (isset($_SESSION['usuario_id'])) {
       text-align: center;
       padding: 2rem 1rem;
       margin-top: 2rem;
+      animation: slideUp 1s ease;
+    }
+
+    /* ===== KEYFRAMES ===== */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideDown {
+      from { transform: translateY(-60px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(60px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
