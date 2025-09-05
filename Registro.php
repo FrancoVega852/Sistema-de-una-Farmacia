@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <style>
     :root {
-      --verde: #008f4c;
+      --verde: #008f4c;        /* Verde fuerte */
       --verde-oscuro: #006837;
       --blanco: #ffffff;
       --gris: #f4f4f4;
@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     .form-container {
-      background-color: var(--blanco);
+      background-color: var(--verde); /* ahora igual que login */
       padding: 1.0rem;
       border-radius: 1rem;
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
@@ -69,6 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       display: flex;
       flex-direction: column;
       align-items: center;
+      color: var(--blanco);
     }
 
     .avatar {
@@ -78,20 +79,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       transform: translateX(-50%);
       width: 60px;
       height: 60px;
-      background-color: var(--verde);
+      background-color: var(--acento);
       border-radius: 50%;
       display: flex;
       justify-content: center;
       align-items: center;
       color: var(--blanco);
       font-size: 28px;
-      box-shadow: 0 0 10px rgba(0, 143, 76, 0.7);
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
       border: 3px solid var(--blanco);
     }
 
     .form-container h2 {
       font-size: 1.3rem;
-      color: var(--verde-oscuro);
+      color: var(--blanco);
       margin-top: 3rem;
       margin-bottom: 1rem;
       text-align: center;
@@ -108,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .input-group label {
       display: block;
       font-size: 0.85rem;
-      color: var(--verde-oscuro);
+      color: var(--blanco);
       margin-bottom: 0.25rem;
     }
 
@@ -119,6 +120,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       font-size: 0.9rem;
       border: 1px solid #cbd5e1;
       border-radius: 0.4rem;
+      background: var(--gris);
+      color: #222;
       transition: 0.3s border-color ease;
     }
 
@@ -152,20 +155,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       text-align: center;
       font-weight: bold;
       color: var(--acento);
+      background: var(--blanco);
+      padding: 0.4rem;
+      border-radius: 0.4rem;
       font-size: 0.9rem;
     }
 
-    p { margin-top: 1rem; }
+    p { margin-top: 1rem; color: var(--blanco); }
 
     p a {
-      color: var(--verde);
+      color: var(--gris);
       text-decoration: none;
       font-weight: 600;
       transition: color 0.3s ease;
     }
 
     p a:hover {
-      color: var(--verde-oscuro);
+      color: var(--blanco);
       text-decoration: underline;
     }
 
