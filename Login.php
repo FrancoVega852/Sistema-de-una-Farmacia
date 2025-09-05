@@ -18,11 +18,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $_SESSION["usuario_correo"] = $usuario["email"];
         $_SESSION["usuario_rol"] = $usuario["rol"];
 
-        // (Opcional) guardar log si tenés una tabla Login
-        // $stmt = $conn->conexion->prepare("INSERT INTO Login (usuario_id, estado, fecha_hora_acceso) VALUES (?, 'Activo', NOW())");
-        // $stmt->bind_param("i", $usuario["id"]);
-        // $stmt->execute();
-
         header("Location: menu.php");
         exit;
     } else {
@@ -34,13 +29,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <html lang="es">
 <head>
     <meta charset="UTF-8" />
-    <title>Iniciar Sesión - Farmacia</title>
+    <title>Iniciar Sesión - Farvec</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
     <style>
+        :root {
+            --verde: #008f4c;
+            --verde-oscuro: #006837;
+            --blanco: #ffffff;
+            --gris: #f4f4f4;
+            --acento: #e85c4a;
+            --texto: #222222;
+        }
+
         body {
             margin: 0;
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #1f2937, #3b82f6);
+            background: linear-gradient(135deg, var(--gris), #c7f0d8, #e6f4ec);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -49,10 +53,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         .login-container {
-            background-color: white;
+            background: var(--verde);
+            color: var(--blanco);
             padding: 2rem;
             border-radius: 1rem;
-            box-shadow: 0 0 30px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
             width: 100%;
             max-width: 400px;
             text-align: center;
@@ -60,25 +65,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         .icon-persona {
-            width: 60px;
-            height: 60px;
-            background-color: #3b82f6;
+            width: 70px;
+            height: 70px;
+            background-color: var(--blanco);
             border-radius: 50%;
             margin: 0 auto 1rem auto;
             display: flex;
             justify-content: center;
             align-items: center;
-            box-shadow: 0 4px 12px rgba(59,130,246,0.5);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
         .icon-persona svg {
-            fill: white;
-            width: 32px;
-            height: 32px;
+            fill: var(--verde);
+            width: 36px;
+            height: 36px;
         }
 
         .login-container h2 {
             margin-bottom: 1.5rem;
-            color: #1f2937;
+            color: var(--blanco);
         }
 
         .input-group {
@@ -88,58 +93,64 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         .input-group label {
             display: block;
-            margin-bottom: 0.5rem;
-            color: #374151;
+            margin-bottom: 0.4rem;
+            color: var(--blanco);
             font-weight: 600;
         }
 
         .input-group input {
             width: 100%;
             padding: 0.75rem;
-            border: 1px solid #d1d5db;
+            border: 1px solid #ccc;
             border-radius: 0.5rem;
-            transition: border-color 0.3s ease;
             font-size: 1rem;
+            background: var(--gris);
         }
 
         .input-group input:focus {
-            border-color: #3b82f6;
+            border-color: var(--acento);
+            box-shadow: 0 0 6px rgba(232,92,74,0.5);
             outline: none;
         }
 
         .btn {
             width: 100%;
             padding: 0.75rem;
-            background-color: #3b82f6;
-            color: white;
+            background-color: var(--acento);
+            color: var(--blanco);
             border: none;
             border-radius: 0.5rem;
             font-weight: 600;
             cursor: pointer;
             transition: background-color 0.3s ease, transform 0.2s ease;
             font-size: 1rem;
+            margin-top: 0.5rem;
         }
 
         .btn:hover {
-            background-color: #2563eb;
+            background-color: #d94c3c;
             transform: scale(1.03);
         }
 
         .error {
-            color: red;
+            color: var(--acento);
+            background: var(--blanco);
+            padding: 0.5rem;
+            border-radius: 0.4rem;
             margin-top: 1rem;
             font-size: 0.9rem;
             text-align: center;
+            font-weight: bold;
         }
 
         .register-link {
             margin-top: 1rem;
             font-size: 0.9rem;
-            color: #374151;
+            color: var(--blanco);
         }
 
         .register-link a {
-            color: #3b82f6;
+            color: var(--gris);
             font-weight: 600;
             text-decoration: none;
             margin-left: 5px;
@@ -147,6 +158,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         .register-link a:hover {
             text-decoration: underline;
+            color: var(--blanco);
         }
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
