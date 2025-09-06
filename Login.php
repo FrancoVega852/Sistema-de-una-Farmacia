@@ -10,32 +10,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $correo = trim($_POST["correo"]);
     $contrasena = $_POST["contrasena"];
 
-    // Ahora login busca en la tabla Usuario de tu base
-    $sql = "SELECT id, nombre, email, password, rol 
-            FROM Usuario 
-            WHERE email = ? 
-            LIMIT 1";
-    $stmt = $conn->conexion->prepare($sql);
-    $stmt->bind_param("s", $correo);
-    $stmt->execute();
-    $resultado = $stmt->get_result();
+    $usuario = $usuarioObj->login($correo, $contrasena);
 
-    if ($resultado->num_rows === 1) {
-        $usuario = $resultado->fetch_assoc();
+    if ($usuario) {
+        $_SESSION["usuario_id"] = $usuario["id"];
+        $_SESSION["usuario_nombre"] = $usuario["nombre"];
+        $_SESSION["usuario_correo"] = $usuario["email"];
+        $_SESSION["usuario_rol"] = $usuario["rol"];
 
-        if (password_verify($contrasena, $usuario["password"])) {
-            $_SESSION["usuario_id"] = $usuario["id"];
-            $_SESSION["usuario_nombre"] = $usuario["nombre"];
-            $_SESSION["usuario_correo"] = $usuario["email"];
-            $_SESSION["usuario_rol"] = $usuario["rol"];
-
-            header("Location: menu.php");
-            exit;
-        } else {
-            $error = "Contraseña incorrecta.";
-        }
+        header("Location: menu.php");
+        exit;
     } else {
-        $error = "Correo no encontrado.";
+        $error = "Correo o contraseña incorrectos.";
     }
 }
 ?>
@@ -43,14 +29,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <html lang="es">
 <head>
     <meta charset="UTF-8" />
-    <title>Iniciar Sesión - Farvec</title>
+    <title>Iniciar Sesión - Farmacia</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
     <style>
         :root {
             --verde: #008f4c;
             --verde-oscuro: #006837;
             --blanco: #ffffff;
-            --gris: #f4f4f4;
             --acento: #e85c4a;
             --texto: #222222;
         }
@@ -58,7 +43,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         body {
             margin: 0;
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, var(--gris), #c7f0d8, #e6f4ec);
+            background: var(--verde);   /* ✅ Fondo verde */
             display: flex;
             justify-content: center;
             align-items: center;
@@ -67,11 +52,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         .login-container {
-            background: var(--verde);
-            color: var(--blanco);
+            background-color: var(--blanco);
             padding: 2rem;
             border-radius: 1rem;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            box-shadow: 0 0 25px rgba(0,0,0,0.25);
             width: 100%;
             max-width: 400px;
             text-align: center;
@@ -79,25 +63,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         .icon-persona {
-            width: 70px;
-            height: 70px;
-            background-color: var(--blanco);
+            width: 60px;
+            height: 60px;
+            background-color: var(--verde-oscuro);
             border-radius: 50%;
             margin: 0 auto 1rem auto;
             display: flex;
             justify-content: center;
             align-items: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
         .icon-persona svg {
-            fill: var(--verde);
-            width: 36px;
-            height: 36px;
+            fill: var(--blanco);
+            width: 32px;
+            height: 32px;
         }
 
         .login-container h2 {
             margin-bottom: 1.5rem;
-            color: var(--blanco);
+            color: var(--verde-oscuro);
         }
 
         .input-group {
@@ -107,8 +91,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         .input-group label {
             display: block;
-            margin-bottom: 0.4rem;
-            color: var(--blanco);
+            margin-bottom: 0.5rem;
+            color: var(--texto);
             font-weight: 600;
         }
 
@@ -118,19 +102,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             border: 1px solid #ccc;
             border-radius: 0.5rem;
             font-size: 1rem;
-            background: var(--gris);
         }
 
         .input-group input:focus {
-            border-color: var(--acento);
-            box-shadow: 0 0 6px rgba(232,92,74,0.5);
+            border-color: var(--verde);
             outline: none;
         }
 
         .btn {
             width: 100%;
             padding: 0.75rem;
-            background-color: var(--acento);
+            background-color: var(--verde);
             color: var(--blanco);
             border: none;
             border-radius: 0.5rem;
@@ -138,41 +120,39 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             cursor: pointer;
             transition: background-color 0.3s ease, transform 0.2s ease;
             font-size: 1rem;
-            margin-top: 0.5rem;
+            margin-top: 1rem;
         }
 
         .btn:hover {
-            background-color: #d94c3c;
+            background-color: var(--verde-oscuro);
             transform: scale(1.03);
         }
 
         .error {
-            color: var(--acento);
-            background: var(--blanco);
-            padding: 0.5rem;
-            border-radius: 0.4rem;
+            background: var(--acento);
+            color: var(--blanco);
             margin-top: 1rem;
+            padding: 0.5rem;
+            border-radius: 6px;
             font-size: 0.9rem;
             text-align: center;
-            font-weight: bold;
         }
 
         .register-link {
             margin-top: 1rem;
             font-size: 0.9rem;
-            color: var(--blanco);
+            color: var(--texto);
         }
 
         .register-link a {
-            color: var(--gris);
+            color: var(--verde);
             font-weight: 600;
             text-decoration: none;
-            margin-left: 5px;
         }
 
         .register-link a:hover {
+            color: var(--verde-oscuro);
             text-decoration: underline;
-            color: var(--blanco);
         }
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -183,8 +163,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <div class="login-container">
         <div class="icon-persona" aria-hidden="true">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4
-                v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 
+                         1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 
+                         4v2h16v-2c0-2.66-5.33-4-8-4z"/>
             </svg>
         </div>
         <h2>Iniciar Sesión</h2>

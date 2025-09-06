@@ -1,6 +1,5 @@
--- ==========================
--- CREACIÓN DE TABLAS
--- ==========================
+CREATE DATABASE Farmacia;
+USE Farmacia;
 
 CREATE TABLE Usuario (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -56,6 +55,17 @@ CREATE TABLE Lote (
     fecha_vencimiento DATE,
     cantidad_inicial INT,
     cantidad_actual INT,
+    FOREIGN KEY (producto_id) REFERENCES Producto(id)
+);
+
+
+CREATE TABLE HistorialStock (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    producto_id INT NOT NULL,
+    tipo ENUM('Alta','Baja','Venta','Compra','Devolución','Vencimiento') NOT NULL,
+    cantidad INT NOT NULL,
+    detalle VARCHAR(255),
+    fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (producto_id) REFERENCES Producto(id)
 );
 
@@ -137,6 +147,10 @@ CREATE TABLE Alerta (
     FOREIGN KEY (producto_id) REFERENCES Producto(id)
 );
 
+-- ===========================================
+-- DATOS DE PRUEBA
+-- ===========================================
+
 -- Usuarios
 INSERT INTO Usuario (nombre, email, usuario, password, rol) VALUES
 ('Ana Gómez', 'ana@farmacia.com', 'agomez', '1234', 'Administrador'),
@@ -169,6 +183,15 @@ INSERT INTO Lote (producto_id, numero_lote, fecha_vencimiento, cantidad_inicial,
 (1, 'L001', '2026-05-01', 100, 100),
 (2, 'L002', '2025-12-01', 200, 200),
 (3, 'L003', '2026-03-15', 50, 50);
+
+-- Historial de Stock
+INSERT INTO HistorialStock (producto_id, tipo, cantidad, detalle) VALUES
+(1, 'Alta', 100, 'Carga inicial lote L001 Ibuprofeno 600mg'),
+(2, 'Alta', 200, 'Carga inicial lote L002 Paracetamol 500mg'),
+(3, 'Alta', 50, 'Carga inicial lote L003 Shampoo Herbal'),
+(1, 'Venta', 1, 'Venta de 1 caja Ibuprofeno 600mg - Ticket #001'),
+(2, 'Venta', 1, 'Venta de 1 caja Paracetamol 500mg - Ticket #001'),
+(3, 'Baja', 5, 'Baja por producto dañado en lote L003');
 
 -- Cuentas Corrientes
 INSERT INTO CuentaCorriente (cliente_id, saldo_actual, limite_credito) VALUES

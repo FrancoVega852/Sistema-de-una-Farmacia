@@ -1,11 +1,7 @@
 <?php
 session_start();
-
-// Si el usuario ya está logueado, redirigir a menú principal
-if (isset($_SESSION['usuario_id'])) {
-    header("Location: menu.php");
-    exit();
-}
+// ❌ Quitamos la redirección automática
+// ✅ Ahora siempre mostrará la página principal
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -219,8 +215,8 @@ if (isset($_SESSION['usuario_id'])) {
   <h2>La salud de tu farmacia está en la gestión</h2>
   <p>Sistema integral para administrar ventas, stock, recetas y más.</p>
   <div class="botones">
-    <a href="login.php" class="btn-login">Iniciar Sesión</a>
-    <a href="registro.php" class="btn-registro">Registrarse</a>
+    <a href="Login.php" class="btn-login">Iniciar Sesión</a>
+    <a href="Registro.php" class="btn-registro">Registrarse</a>
   </div>
 </section>
 

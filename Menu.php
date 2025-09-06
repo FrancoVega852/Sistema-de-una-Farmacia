@@ -7,13 +7,11 @@ if (!isset($_SESSION["usuario_id"])) {
     exit();
 }
 
-// Crear conexión con tu clase Conexion
 $conn = new Conexion();
 $conexion = $conn->conexion;
 
 $usuario_id = $_SESSION["usuario_id"];
 
-// Traer datos del usuario
 $sql = "SELECT nombre, email, rol FROM Usuario WHERE id = ?";
 $stmt = $conexion->prepare($sql);
 $stmt->bind_param("i", $usuario_id);
@@ -59,12 +57,17 @@ $usuario = $resultado->fetch_assoc();
     }
 
     .sidebar h2 {
-      margin: 0 0 30px 0;
+      margin: 0 0 20px 0;
       font-size: 22px;
       font-weight: bold;
-      color: var(--blanco);
       text-transform: uppercase;
       letter-spacing: 1px;
+    }
+
+    .user-info {
+      font-size: 14px;
+      margin-bottom: 30px;
+      text-align: center;
     }
 
     ul {
@@ -109,6 +112,7 @@ $usuario = $resultado->fetch_assoc();
     h1 {
       font-size: 26px;
       color: var(--verde-oscuro);
+      animation: fadeUp 1s ease;
     }
 
     .card {
@@ -130,18 +134,18 @@ $usuario = $resultado->fetch_assoc();
       from { opacity: 0; }
       to { opacity: 1; }
     }
-
     @keyframes slideIn {
       from { transform: translateX(-250px); opacity: 0; }
       to { transform: translateX(0); opacity: 1; }
     }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
 
     /* ===== RESPONSIVE ===== */
     @media (max-width: 768px) {
-      body {
-        flex-direction: column;
-      }
-
+      body { flex-direction: column; }
       .sidebar {
         width: 100%;
         height: auto;
@@ -150,40 +154,26 @@ $usuario = $resultado->fetch_assoc();
         justify-content: center;
         padding: 10px;
       }
-
-      .sidebar h2 {
-        display: none;
-      }
-
-      .sidebar ul {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        padding: 0;
-        margin: 0;
-      }
-
-      .sidebar ul li {
-        margin: 5px;
-      }
-
-      .sidebar ul li a {
-        padding: 8px 12px;
-        font-size: 14px;
-      }
-
-      .contenido {
-        padding: 20px;
-      }
+      .sidebar h2, .user-info { display: none; }
+      .sidebar ul { display: flex; flex-wrap: wrap; justify-content: center; }
+      .sidebar ul li { margin: 5px; }
+      .sidebar ul li a { padding: 8px 12px; font-size: 14px; }
+      .contenido { padding: 20px; }
     }
   </style>
 </head>
 <body>
   <div class="sidebar">
     <h2>Farvec</h2>
+    <div class="user-info">
+      <strong><?= htmlspecialchars($usuario["nombre"]) ?></strong><br>
+      <small><?= htmlspecialchars($usuario["email"]) ?></small><br>
+      <em><?= htmlspecialchars($usuario["rol"]) ?></em>
+    </div>
     <ul>
       <?php if ($usuario['rol'] === 'Administrador' || $usuario['rol'] === 'Farmaceutico'): ?>
         <li><a href="stock.php"><i class="fa-solid fa-capsules"></i> Stock y Lotes</a></li>
+        <li><a href="Historial.php"><i class="fa-solid fa-clipboard-list"></i> Historial Stock</a></li>
       <?php endif; ?>
       <li><a href="ventas.php"><i class="fa-solid fa-cash-register"></i> Ventas</a></li>
       <li><a href="compras.php"><i class="fa-solid fa-truck"></i> Compras</a></li>
