@@ -2,22 +2,40 @@
 session_start();
 include 'Conexion.php';
 
-if (!isset($_SESSION["usuario_id"])) {
-    header("Location: login.php");
-    exit();
+class MenuController {
+    private $conn;
+    private $usuario = null;
+
+    public function __construct($conexion) {
+        $this->conn = $conexion;
+        $this->verificarSesion();
+    }
+
+    private function verificarSesion() {
+        if (!isset($_SESSION["usuario_id"])) {
+            header("Location: login.php");
+            exit();
+        }
+    }
+
+    public function obtenerUsuario() {
+        $usuario_id = $_SESSION["usuario_id"];
+        $sql = "SELECT nombre, email, rol FROM Usuario WHERE id = ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $usuario_id);
+        $stmt->execute();
+        $resultado = $stmt->get_result();
+        $this->usuario = $resultado->fetch_assoc();
+        return $this->usuario;
+    }
 }
 
+// =========================
+// Uso del controlador
+// =========================
 $conn = new Conexion();
-$conexion = $conn->conexion;
-
-$usuario_id = $_SESSION["usuario_id"];
-
-$sql = "SELECT nombre, email, rol FROM Usuario WHERE id = ?";
-$stmt = $conexion->prepare($sql);
-$stmt->bind_param("i", $usuario_id);
-$stmt->execute();
-$resultado = $stmt->get_result();
-$usuario = $resultado->fetch_assoc();
+$menu = new MenuController($conn->conexion);
+$usuario = $menu->obtenerUsuario();
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -185,8 +203,6 @@ $usuario = $resultado->fetch_assoc();
 
   <div class="contenido">
     <h1>Bienvenido, <?= htmlspecialchars($usuario["nombre"]) ?> 👋</h1>
-    <p>Tu rol: <strong><?= htmlspecialchars($usuario["rol"]) ?></strong></p>
-
     <div class="card">
       <h2>📊 Panel de gestión</h2>
       <p>Seleccioná una opción del menú para comenzar a trabajar en el sistema de farmacia.</p>

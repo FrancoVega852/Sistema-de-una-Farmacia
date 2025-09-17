@@ -3,27 +3,45 @@ session_start();
 include 'Conexion.php';
 include 'Usuario.php';
 
-$conn = new Conexion();
-$usuarioObj = new Usuario($conn->conexion);
+class LoginController {
+    private $usuarioObj;
+    private $error = "";
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $correo = trim($_POST["correo"]);
-    $contrasena = $_POST["contrasena"];
+    public function __construct($conexion) {
+        $this->usuarioObj = new Usuario($conexion);
+    }
 
-    $usuario = $usuarioObj->login($correo, $contrasena);
+    public function procesarLogin() {
+        if ($_SERVER["REQUEST_METHOD"] === "POST") {
+            $correo = trim($_POST["correo"]);
+            $contrasena = $_POST["contrasena"];
 
-    if ($usuario) {
-        $_SESSION["usuario_id"] = $usuario["id"];
-        $_SESSION["usuario_nombre"] = $usuario["nombre"];
-        $_SESSION["usuario_correo"] = $usuario["email"];
-        $_SESSION["usuario_rol"] = $usuario["rol"];
+            $usuario = $this->usuarioObj->login($correo, $contrasena);
 
-        header("Location: menu.php");
-        exit;
-    } else {
-        $error = "Correo o contraseña incorrectos.";
+            if ($usuario) {
+                $_SESSION["usuario_id"]     = $usuario["id"];
+                $_SESSION["usuario_nombre"] = $usuario["nombre"];
+                $_SESSION["usuario_correo"] = $usuario["email"];
+                $_SESSION["usuario_rol"]    = $usuario["rol"];
+
+                header("Location: menu.php");
+                exit;
+            } else {
+                $this->error = "Correo o contraseña incorrectos.";
+            }
+        }
+    }
+
+    public function getError() {
+        return $this->error;
     }
 }
+
+// Inicializar login
+$conn = new Conexion();
+$loginController = new LoginController($conn->conexion);
+$loginController->procesarLogin();
+$error = $loginController->getError();
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -43,7 +61,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         body {
             margin: 0;
             font-family: 'Inter', sans-serif;
-            background: var(--verde);   /* ✅ Fondo verde */
+            background: var(--verde);   /* Fondo verde */
             display: flex;
             justify-content: center;
             align-items: center;

@@ -1,6 +1,6 @@
 <?php
 session_start();
-// ❌ Quitamos la redirección automática
+// ❌ Eliminamos la redirección automática
 // ✅ Ahora siempre mostrará la página principal
 ?>
 <!DOCTYPE html>

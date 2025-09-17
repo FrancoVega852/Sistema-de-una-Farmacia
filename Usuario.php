@@ -1,40 +1,65 @@
 <?php
 class Usuario {
-    private $conexion;
+    private mysqli $db;
 
-    public function __construct($conexion) {
-        $this->conexion = $conexion;
+    public function __construct(mysqli $conexion) {
+        $this->db = $conexion;
     }
 
-    // Login con compatibilidad y migración automática
-    public function login($correo, $contrasena) {
-        $sql = "SELECT * FROM Usuario WHERE email = ? LIMIT 1";
-        $stmt = $this->conexion->prepare($sql);
-        $stmt->bind_param("s", $correo);
-        $stmt->execute();
-        $resultado = $stmt->get_result();
+    /**
+     * Login de usuario
+     * @param string $correo
+     * @param string $contrasena
+     * @return array|false  Retorna datos de usuario o false si falla
+     */
+    public function login(string $correo, string $contrasena) {
+        try {
+            $sql = "SELECT * FROM Usuario WHERE email = ? LIMIT 1";
+            $stmt = $this->db->prepare($sql);
+            $stmt->bind_param("s", $correo);
+            $stmt->execute();
+            $resultado = $stmt->get_result();
 
-        if ($resultado->num_rows === 1) {
-            $usuario = $resultado->fetch_assoc();
+            if ($resultado && $resultado->num_rows === 1) {
+                $usuario = $resultado->fetch_assoc();
 
-            // Caso: contraseña en texto plano (ej: "1234")
-            if ($contrasena === $usuario['password']) {
-                // Migramos a hash automáticamente
-                $nuevoHash = password_hash($contrasena, PASSWORD_DEFAULT);
-                $upd = $this->conexion->prepare("UPDATE Usuario SET password=? WHERE id=?");
-                $upd->bind_param("si", $nuevoHash, $usuario['id']);
-                $upd->execute();
+                // Caso 1: contraseña en texto plano → migrar a hash
+                if ($contrasena === $usuario['password']) {
+                    $nuevoHash = $this->migrarPassword($usuario['id'], $contrasena);
+                    $usuario['password'] = $nuevoHash;
+                    return $usuario;
+                }
 
-                $usuario['password'] = $nuevoHash; 
-                return $usuario;
+                // Caso 2: contraseña ya hasheada
+                if ($this->verificarPassword($contrasena, $usuario['password'])) {
+                    return $usuario;
+                }
             }
-
-            // Caso: contraseña ya en hash
-            if (password_verify($contrasena, $usuario['password'])) {
-                return $usuario;
-            }
+        } catch (Exception $e) {
+            error_log("❌ Error en login: " . $e->getMessage());
         }
         return false;
     }
+
+    /**
+     * Migra contraseña en texto plano a hash seguro
+     * @param int $usuario_id
+     * @param string $contrasena
+     * @return string Hash generado
+     */
+    private function migrarPassword(int $usuario_id, string $contrasena): string {
+        $nuevoHash = password_hash($contrasena, PASSWORD_DEFAULT);
+        $sql = "UPDATE Usuario SET password=? WHERE id=?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("si", $nuevoHash, $usuario_id);
+        $stmt->execute();
+        return $nuevoHash;
+    }
+
+    /**
+     * Verifica contraseña contra hash
+     */
+    private function verificarPassword(string $contrasena, string $hash): bool {
+        return password_verify($contrasena, $hash);
+    }
 }
-?>

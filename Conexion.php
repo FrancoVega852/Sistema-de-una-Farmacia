@@ -1,11 +1,25 @@
 <?php
 class Conexion {
+    private $host = "localhost";
+    private $usuario = "root";
+    private $password = "";
+    private $baseDatos = "farmacia";
     public $conexion;
 
     public function __construct() {
-        $this->conexion = new mysqli("localhost", "root", "", "farmacia"); 
-        if ($this->conexion->connect_error) {
-            die("Error de conexión: " . $this->conexion->connect_error);
+        // Activar reportes de errores de mysqli
+        mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+
+        try {
+            $this->conexion = new mysqli(
+                $this->host,
+                $this->usuario,
+                $this->password,
+                $this->baseDatos
+            );
+            $this->conexion->set_charset("utf8mb4"); // ✅ evita problemas con acentos y ñ
+        } catch (mysqli_sql_exception $e) {
+            die("Error de conexión a la BD: " . $e->getMessage());
         }
     }
 }

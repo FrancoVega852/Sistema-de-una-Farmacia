@@ -1,33 +1,41 @@
 <?php
+session_start();
 include 'Conexion.php';
+include 'Usuario.php';
 
-$conn = new Conexion();
-$mensaje = "";
+class RegistroController {
+    private $usuario;
+    public $mensaje = "";
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $nombre     = trim($_POST['nombre']);
-    $apellido   = trim($_POST['apellido']);
-    $dni        = trim($_POST['dni']);
-    $domicilio  = trim($_POST['domicilio']);
-    $correo     = trim($_POST['correo']);
-    $telefono   = trim($_POST['telefono']);
-    $contrasena = $_POST['contrasena'];
-    $rol        = $_POST['rol'];
+    public function __construct($conexion) {
+        $this->usuario = new Usuario($conexion);
+    }
 
-    $usuario_generado = strtolower(explode('@', $correo)[0]); 
-    $sql = "INSERT INTO Usuario (nombre, email, usuario, password, rol) VALUES (?, ?, ?, ?, ?)";
-    $stmt = $conn->conexion->prepare($sql);
+    public function procesarFormulario() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $nombre     = trim($_POST['nombre']);
+            $apellido   = trim($_POST['apellido']);
+            $dni        = trim($_POST['dni']);
+            $domicilio  = trim($_POST['domicilio']);
+            $correo     = trim($_POST['correo']);
+            $telefono   = trim($_POST['telefono']);
+            $contrasena = $_POST['contrasena'];
+            $rol        = $_POST['rol'];
 
-    $hash = password_hash($contrasena, PASSWORD_DEFAULT);
-    $stmt->bind_param("sssss", $nombre, $correo, $usuario_generado, $hash, $rol);
-
-    if ($stmt->execute()) {
-        header("Location: login.php?registro=exitoso");
-        exit();
-    } else {
-        $mensaje = "Error al registrar usuario: " . $conn->conexion->error;
+            if ($this->usuario->registrar($nombre, $apellido, $correo, $dni, $domicilio, $telefono, $contrasena, $rol)) {
+                header("Location: login.php?registro=exitoso");
+                exit();
+            } else {
+                $this->mensaje = "⚠️ Error al registrar usuario. Intente nuevamente.";
+            }
+        }
     }
 }
+
+// Inicializar controlador
+$conn = new Conexion();
+$controller = new RegistroController($conn->conexion);
+$controller->procesarFormulario();
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -48,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     body {
       margin: 0;
       font-family: 'Inter', sans-serif;
-      background: var(--verde);  /* ✅ Fondo verde como en el login */
+      background: var(--verde);  
       display: flex;
       justify-content: center;
       align-items: center;
@@ -223,8 +231,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </select>
       </div>
       <button type="submit" class="btn">Registrarse</button>
-      <?php if (!empty($mensaje)) : ?>
-        <div class="mensaje"><?php echo htmlspecialchars($mensaje); ?></div>
+      <?php if (!empty($controller->mensaje)) : ?>
+        <div class="mensaje"><?= htmlspecialchars($controller->mensaje) ?></div>
       <?php endif; ?>
     </form>
     <p>¿Ya tienes una cuenta? <a href="login.php">Inicia sesión</a></p>

@@ -1,98 +1,80 @@
 <?php
 session_start();
-include 'Conexion.php';
+require_once 'Conexion.php';
 
-// Verificar sesión
 if (!isset($_SESSION["usuario_id"])) {
     header("Location: login.php");
     exit();
 }
 
-$conn = new Conexion();
-$conexion = $conn->conexion;
+class Historial {
+    private $conn;
+
+    public function __construct($conexion) {
+        $this->conn = $conexion;
+    }
+
+    public function obtenerMovimientos($producto_id = null, $tipo = null) {
+        $sql = "SELECT h.id, h.tipo, h.cantidad, h.detalle, h.fecha, p.nombre AS producto
+                FROM HistorialStock h
+                JOIN Producto p ON h.producto_id = p.id
+                WHERE 1=1";
+
+        if (!empty($producto_id)) {
+            $sql .= " AND p.id = " . intval($producto_id);
+        }
+        if (!empty($tipo)) {
+            $sql .= " AND h.tipo = '" . $this->conn->real_escape_string($tipo) . "'";
+        }
+
+        $sql .= " ORDER BY h.fecha DESC";
+        return $this->conn->query($sql);
+    }
+
+    public function obtenerProductos() {
+        return $this->conn->query("SELECT id, nombre FROM Producto ORDER BY nombre");
+    }
+}
+
+// ✅ Inicializar
+$conn      = new Conexion();
+$historial = new Historial($conn->conexion);
 
 // Filtros
 $filtroProducto = $_GET['producto_id'] ?? '';
-$filtroTipo = $_GET['tipo'] ?? '';
+$filtroTipo     = $_GET['tipo'] ?? '';
 
-$sql = "SELECT h.id, h.tipo, h.cantidad, h.detalle, h.fecha, p.nombre AS producto
-        FROM HistorialStock h
-        JOIN Producto p ON h.producto_id = p.id
-        WHERE 1=1";
-
-if (!empty($filtroProducto)) {
-    $sql .= " AND p.id = " . intval($filtroProducto);
-}
-if (!empty($filtroTipo)) {
-    $sql .= " AND h.tipo = '" . $conexion->real_escape_string($filtroTipo) . "'";
-}
-
-$sql .= " ORDER BY h.fecha DESC";
-
-$resultado = $conexion->query($sql);
-
-// Traer lista de productos para el filtro
-$productos = $conexion->query("SELECT id, nombre FROM Producto ORDER BY nombre");
+$resultado = $historial->obtenerMovimientos($filtroProducto, $filtroTipo);
+$productos = $historial->obtenerProductos();
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <title>Historial de Movimientos - Farvec</title>
+  <link rel="stylesheet" href="estilos.css">
   <style>
-    :root {
-      --verde: #008f4c;
-      --verde-oscuro: #006837;
-      --blanco: #ffffff;
-      --gris: #f4f4f4;
-      --acento: #e85c4a;
-    }
-    body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--gris); padding: 20px; }
-    h1 { color: var(--verde-oscuro); margin-bottom: 20px; }
     table {
-      width: 100%; border-collapse: collapse; background: var(--blanco);
+      width: 100%; border-collapse: collapse; background: #fff;
       border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      margin-top: 20px;
     }
     th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-    th { background: var(--verde); color: var(--blanco); }
+    th { background: #008f4c; color: #fff; }
     tr:hover { background: #f1f1f1; }
     .filtros {
-      background: var(--blanco);
-      padding: 15px;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      margin-bottom: 20px;
+      background: #fff; padding: 15px; margin-bottom: 20px;
+      border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
-    select, button {
-      padding: 8px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      margin-right: 10px;
+    .btn-volver {
+      background: #006837; color: #fff; padding: 10px 15px;
+      border-radius: 6px; text-decoration: none; font-weight: bold;
+      margin-bottom: 20px; display: inline-block;
     }
-    button {
-      background: var(--acento);
-      color: var(--blanco);
-      border: none;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    button:hover { background: #d94c3c; }
-    .btn-menu {
-      background: #006837;
-      color: white;
-      padding: 10px 15px;
-      border-radius: 6px;
-      text-decoration: none;
-      font-weight: bold;
-      margin-bottom: 20px;
-      display: inline-block;
-    }
-    .btn-menu:hover { background: #009f4c; transform: scale(1.05); }
+    .btn-volver:hover { background: #009f4c; }
   </style>
 </head>
 <body>
-  <a href="Menu.php" class="btn-menu">⬅️ Volver al Menú</a>
+  <a href="Menu.php" class="btn-volver">⬅ Volver al Menú</a>
   <h1>📊 Historial de Movimientos de Stock</h1>
 
   <form method="GET" class="filtros">
@@ -144,9 +126,7 @@ $productos = $conexion->query("SELECT id, nombre FROM Producto ORDER BY nombre")
           </tr>
         <?php endwhile; ?>
       <?php else: ?>
-        <tr>
-          <td colspan="6">No hay movimientos registrados</td>
-        </tr>
+        <tr><td colspan="6">No hay movimientos registrados</td></tr>
       <?php endif; ?>
     </tbody>
   </table>
