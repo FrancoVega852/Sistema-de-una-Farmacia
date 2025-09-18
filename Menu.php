@@ -72,8 +72,6 @@ $usuario = $menu->obtenerUsuario();
       flex-direction: column;
       align-items: center;
       animation: slideIn 0.8s ease;
-
-      height: 100vh; /* ✅ ahora la barra ocupa toda la pantalla */
     }
 
     .sidebar h2 {

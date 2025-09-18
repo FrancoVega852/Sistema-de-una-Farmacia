@@ -145,3 +145,61 @@ CREATE TABLE Alerta (
     fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (producto_id) REFERENCES Producto(id) ON DELETE CASCADE
 );
+-- ===========================================
+-- DATOS DE PRUEBA
+-- ===========================================
+
+-- Usuarios
+INSERT INTO Usuario (nombre, email, usuario, password, rol) VALUES
+('Ana Gómez', 'ana@farmacia.com', 'agomez', '1234', 'Administrador'),
+('Juan Pérez', 'juan@farmacia.com', 'jperez', '1234', 'Farmaceutico'),
+('Carla Díaz', 'carla@farmacia.com', 'cdiaz', '1234', 'Empleado');
+
+-- Clientes
+INSERT INTO Cliente (nombre, apellido, tipoDocumento, nroDocumento, telefono, email, direccion) VALUES
+('Luis', 'Martínez', 'DNI', '30111222', '1122334455', 'luis@mail.com', 'Calle Falsa 123'),
+('María', 'López', 'DNI', '28999111', '1133445566', 'maria@mail.com', 'Av. Siempreviva 742');
+
+-- Proveedores
+INSERT INTO Proveedor (razonSocial, cuit, telefono, email, direccion) VALUES
+('Droguería Central', '30-12345678-9', '1144556677', 'ventas@drogcentral.com', 'Mitre 456'),
+('FarmacoPro', '30-87654321-0', '1199887766', 'contacto@farmaco.com', 'San Martín 890');
+
+-- Categorías
+INSERT INTO Categoria (nombre, descripcion) VALUES
+('Medicamentos', 'Productos con receta'),
+('Perfumería', 'Cosméticos y artículos de higiene');
+
+-- Productos
+INSERT INTO Producto (nombre, precio, stock_actual, stock_minimo, requiere_receta, categoria_id) VALUES
+('Ibuprofeno 600mg', 1200.50, 100, 10, TRUE, 1),
+('Paracetamol 500mg', 950.00, 200, 20, FALSE, 1),
+('Shampoo Herbal', 1800.00, 50, 5, FALSE, 2);
+
+-- Lotes
+INSERT INTO Lote (producto_id, numero_lote, fecha_vencimiento, cantidad_inicial, cantidad_actual) VALUES
+(1, 'L001', '2026-05-01', 100, 100),
+(2, 'L002', '2025-12-01', 200, 200),
+(3, 'L003', '2026-03-15', 50, 50);
+
+-- Historial de Stock
+INSERT INTO HistorialStock (producto_id, tipo, cantidad, detalle) VALUES
+(1, 'Alta', 100, 'Carga inicial lote L001 Ibuprofeno 600mg'),
+(2, 'Alta', 200, 'Carga inicial lote L002 Paracetamol 500mg'),
+(3, 'Alta', 50, 'Carga inicial lote L003 Shampoo Herbal'),
+(1, 'Venta', 1, 'Venta de 1 caja Ibuprofeno 600mg - Ticket #001'),
+(2, 'Venta', 1, 'Venta de 1 caja Paracetamol 500mg - Ticket #001'),
+(3, 'Baja', 5, 'Baja por producto dañado en lote L003');
+
+-- Cuentas Corrientes
+INSERT INTO CuentaCorriente (cliente_id, saldo_actual, limite_credito) VALUES
+(1, 5000, 10000),
+(2, 0, 5000);
+
+-- Ventas y detalles
+INSERT INTO Venta (cliente_id, usuario_id, total, estado) VALUES
+(1, 2, 2400.50, 'Pagada');
+
+INSERT INTO DetalleVenta (venta_id, producto_id, cantidad, precio_unitario, subtotal) VALUES
+(1, 1, 1, 1200.50, 1200.50),
+(1, 2, 1, 1200.00, 1200.00);

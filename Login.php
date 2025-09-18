@@ -3,7 +3,7 @@ session_start();
 include 'Conexion.php';
 include 'Usuario.php';
 
-class ControladorLogin {
+class LoginController {
     private $usuarioObj;
     private $error = "";
 
@@ -39,7 +39,7 @@ class ControladorLogin {
 
 // Inicializar login
 $conn = new Conexion();
-$loginController = new ControladorLogin($conn->conexion);
+$loginController = new LoginController($conn->conexion);
 $loginController->procesarLogin();
 $error = $loginController->getError();
 ?>
