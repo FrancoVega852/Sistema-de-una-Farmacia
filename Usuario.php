@@ -62,4 +62,47 @@ class Usuario {
     private function verificarPassword(string $contrasena, string $hash): bool {
         return password_verify($contrasena, $hash);
     }
+
+    /**
+     * Registrar un nuevo usuario
+     * @param string $nombre
+     * @param string $apellido
+     * @param string $correo
+     * @param string $dni
+     * @param string $domicilio
+     * @param string $telefono
+     * @param string $contrasena
+     * @param string $rol
+     * @return bool
+     */
+    public function registrar(
+        string $nombre, 
+        string $apellido, 
+        string $correo, 
+        string $dni, 
+        string $domicilio, 
+        string $telefono, 
+        string $contrasena, 
+        string $rol
+    ): bool {
+        try {
+            $sql = "INSERT INTO Usuario (nombre, apellido, email, usuario, password, rol, fecha_creacion) 
+                    VALUES (?, ?, ?, ?, ?, ?, NOW())";
+            $stmt = $this->db->prepare($sql);
+
+            if (!$stmt) return false;
+
+            // Generar nombre de usuario a partir del correo (antes del @)
+            $usuario = explode('@', $correo)[0];
+
+            // Hashear contraseña
+            $hash = password_hash($contrasena, PASSWORD_DEFAULT);
+
+            $stmt->bind_param("ssssss", $nombre, $apellido, $correo, $usuario, $hash, $rol);
+            return $stmt->execute();
+        } catch (Exception $e) {
+            error_log("❌ Error en registro: " . $e->getMessage());
+            return false;
+        }
+    }
 }

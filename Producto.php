@@ -40,4 +40,29 @@ class Producto {
         $st->bind_param("isis", $producto_id, $tipo, $cantidad, $detalle);
         $st->execute();
     }
+
+    // ✅ Nuevo método para agregar producto + lote
+    public function agregarProductoConLote(
+        string $nombre,
+        float $precio,
+        int $stock_minimo,
+        bool $requiere_receta,
+        ?int $categoria_id,
+        string $numero_lote,
+        ?string $fecha_vencimiento,
+        int $cantidad
+    ): bool {
+        // Primero agregamos el producto
+        $producto_id = $this->agregarProducto($nombre, $precio, $stock_minimo, $requiere_receta, $categoria_id);
+
+        if ($producto_id > 0) {
+            // Después insertamos el lote asociado
+            $sql = "INSERT INTO Lote(producto_id, numero_lote, fecha_vencimiento, cantidad_actual) 
+                    VALUES (?, ?, ?, ?)";
+            $st = $this->db->prepare($sql);
+            $st->bind_param("issi", $producto_id, $numero_lote, $fecha_vencimiento, $cantidad);
+            return $st->execute();
+        }
+        return false;
+    }
 }
