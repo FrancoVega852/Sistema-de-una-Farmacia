@@ -313,6 +313,7 @@ background:radial-gradient( rgba(0,143,76,.08), transparent 60% );animation:puls
         <a href="Historial.php"><i class="fa-solid fa-clipboard-list"></i> Historial de Stock</a>
         <a href="ventas.php"><i class="fa-solid fa-cash-register"></i> Nueva Venta</a>
         <a href="ventas_listar.php"><i class="fa-solid fa-list"></i> Listado de Ventas</a>
+        <a href="compras.php"><i class="fa-solid fa-truck"></i> Compras</a>
         <a href="clientes.php"><i class="fa-solid fa-users"></i> Clientes</a>
         <a href="reportes.php"><i class="fa-solid fa-chart-line"></i> Reportes</a>
       </div>
@@ -449,6 +450,7 @@ background:radial-gradient( rgba(0,143,76,.08), transparent 60% );animation:puls
     <div class="short"><a href="Historial.php"><i class="fa-solid fa-clipboard-list"></i><div>Historial</div></a></div>
     <div class="short"><a href="ventas.php"><i class="fa-solid fa-cash-register"></i><div>Nueva venta</div></a></div>
     <div class="short"><a href="ventas_listar.php"><i class="fa-solid fa-list"></i><div>Listado de ventas</div></a></div>
+    <div class="short"><a href="compras.php"><i class="fa-solid fa-truck"></i><div>Compras</div></a></div>
     <div class="short"><a href="clientes.php"><i class="fa-solid fa-users"></i><div>Clientes</div></a></div>
     <div class="short"><a href="reportes.php"><i class="fa-solid fa-chart-line"></i><div>Reportes</div></a></div>
   </section>

@@ -3,7 +3,7 @@ session_start();
 include 'Conexion.php';
 include 'Usuario.php';
 
-class ControladorRegistro {
+class RegistroController {
     private $usuario;
     public $mensaje = "";
 
@@ -34,7 +34,7 @@ class ControladorRegistro {
 
 // Inicializar controlador
 $conn = new Conexion();
-$controller = new ControladorRegistro($conn->conexion);
+$controller = new RegistroController($conn->conexion);
 $controller->procesarFormulario();
 ?>
 <!DOCTYPE html>

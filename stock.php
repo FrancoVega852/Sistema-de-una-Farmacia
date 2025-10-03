@@ -299,6 +299,62 @@ function verLotes(lotes,nombre){
 }
 function cerrarModal(){document.getElementById('modal').classList.remove('open')}
 function confirmEliminar(id,nombre){if(confirm(`¿Eliminar ${nombre}?`))window.location=`stock_eliminar.php?id=${id}`}
+
+// ====== FILTRO ======
+document.addEventListener('DOMContentLoaded', () => {
+  const q      = document.getElementById('q');
+  const cat    = document.getElementById('cat');
+  const fBajo  = document.getElementById('f-bajo');
+  const fVto   = document.getElementById('f-vto');
+  const fVenc  = document.getElementById('f-venc');
+  const tbody  = document.querySelector('#tabla tbody');
+  const rows   = Array.from(tbody.querySelectorAll('tr'));
+
+  const cellText = (row, idx) =>
+    (row.children[idx]?.textContent || '').trim().toLowerCase();
+
+  function applyFilter() {
+    const qVal    = (q.value || '').trim().toLowerCase();
+    const catVal  = (cat.value || '').trim().toLowerCase();
+    const wantBajo = fBajo.checked;
+    const wantVto  = fVto.checked;
+    const wantVenc = fVenc.checked;
+
+    rows.forEach(row => {
+      const nombre   = cellText(row, 1);
+      const categoria= cellText(row, 2);
+      const stockTxt = cellText(row, 4);
+      const vtoTxt   = cellText(row, 7);
+
+      if (qVal && !nombre.includes(qVal)) { row.style.display='none'; return; }
+      if (catVal && categoria !== catVal) { row.style.display='none'; return; }
+      if (wantBajo && !stockTxt.includes('bajo')) { row.style.display='none'; return; }
+      if (wantVto || wantVenc) {
+        const isPorVencer = vtoTxt.includes('por vencer');
+        const isVencido   = vtoTxt.includes('vencido');
+        const matchVto = (wantVto && isPorVencer) || (wantVenc && isVencido);
+        if (!matchVto) { row.style.display='none'; return; }
+      }
+      row.style.display='';
+    });
+
+    let visibleIndex = 0;
+    rows.forEach(r => {
+      if (r.style.display !== 'none') {
+        r.style.background = (visibleIndex % 2 === 0) ? '#fff' : '#f9fafb';
+        visibleIndex++;
+      }
+    });
+  }
+
+  q.addEventListener('input', applyFilter);
+  cat.addEventListener('change', applyFilter);
+  fBajo.addEventListener('change', applyFilter);
+  fVto.addEventListener('change', applyFilter);
+  fVenc.addEventListener('change', applyFilter);
+
+  applyFilter();
+});
 </script>
 </body>
 </html>

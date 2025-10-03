@@ -8,9 +8,6 @@ class Usuario {
 
     /**
      * Login de usuario
-     * @param string $correo
-     * @param string $contrasena
-     * @return array|false  Retorna datos de usuario o false si falla
      */
     public function login(string $correo, string $contrasena) {
         try {
@@ -23,42 +20,53 @@ class Usuario {
             if ($resultado && $resultado->num_rows === 1) {
                 $usuario = $resultado->fetch_assoc();
 
-                // Caso 1: contraseña en texto plano → migrar a hash
-                if ($contrasena === $usuario['password']) {
-                    $nuevoHash = $this->migrarPassword($usuario['id'], $contrasena);
-                    $usuario['password'] = $nuevoHash;
-                    return $usuario;
-                }
-
-                // Caso 2: contraseña ya hasheada
                 if ($this->verificarPassword($contrasena, $usuario['password'])) {
                     return $usuario;
                 }
             }
         } catch (Exception $e) {
-            error_log("❌ Error en login: " . $e->getMessage());
+            error_log("Error en login: " . $e->getMessage());
         }
         return false;
     }
 
     /**
-     * Migra contraseña en texto plano a hash seguro
-     * @param int $usuario_id
-     * @param string $contrasena
-     * @return string Hash generado
+     * Registrar nuevo usuario
      */
-    private function migrarPassword(int $usuario_id, string $contrasena): string {
-        $nuevoHash = password_hash($contrasena, PASSWORD_DEFAULT);
-        $sql = "UPDATE Usuario SET password=? WHERE id=?";
-        $stmt = $this->db->prepare($sql);
-        $stmt->bind_param("si", $nuevoHash, $usuario_id);
-        $stmt->execute();
-        return $nuevoHash;
+    public function registrar(
+        string $nombre,
+        string $apellido,
+        string $correo,
+        string $dni,
+        string $domicilio,
+        string $telefono,
+        string $contrasena,
+        string $rol
+    ): bool {
+        try {
+            $hash = password_hash($contrasena, PASSWORD_DEFAULT);
+
+            $sql = "INSERT INTO Usuario 
+                (nombre, apellido, email, dni, domicilio, telefono, password, rol) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            
+            $stmt = $this->db->prepare($sql);
+            if (!$stmt) {
+                return false;
+            }
+
+            $stmt->bind_param(
+                "ssssssss",
+                $nombre, $apellido, $correo, $dni, $domicilio, $telefono, $hash, $rol
+            );
+
+            return $stmt->execute();
+        } catch (Exception $e) {
+            error_log("Error en registrar: " . $e->getMessage());
+            return false;
+        }
     }
 
-    /**
-     * Verifica contraseña contra hash
-     */
     private function verificarPassword(string $contrasena, string $hash): bool {
         return password_verify($contrasena, $hash);
     }

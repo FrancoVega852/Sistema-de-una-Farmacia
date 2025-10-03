@@ -1,13 +1,19 @@
 CREATE DATABASE Farmacia;
 USE Farmacia;
 
+-- ========================
+-- TABLA USUARIO ADAPTADA
+-- ========================
 CREATE TABLE Usuario (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
+    apellido VARCHAR(100) NOT NULL,
+    dni VARCHAR(20) UNIQUE NOT NULL,
+    domicilio VARCHAR(200),
+    telefono VARCHAR(20),
     email VARCHAR(100) UNIQUE NOT NULL,
-    usuario VARCHAR(50) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
-    rol ENUM('Administrador','Farmaceutico','Empleado') NOT NULL,
+    rol ENUM('Administrador','Farmaceutico','Empleado','Cliente') NOT NULL,
     fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -145,15 +151,16 @@ CREATE TABLE Alerta (
     fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (producto_id) REFERENCES Producto(id) ON DELETE CASCADE
 );
+
 -- ===========================================
 -- DATOS DE PRUEBA
 -- ===========================================
 
 -- Usuarios
-INSERT INTO Usuario (nombre, email, usuario, password, rol) VALUES
-('Ana Gómez', 'ana@farmacia.com', 'agomez', '1234', 'Administrador'),
-('Juan Pérez', 'juan@farmacia.com', 'jperez', '1234', 'Farmaceutico'),
-('Carla Díaz', 'carla@farmacia.com', 'cdiaz', '1234', 'Empleado');
+INSERT INTO Usuario (nombre, apellido, dni, domicilio, telefono, email, password, rol) VALUES
+('Ana', 'Gómez', '30123456', 'Av. Mitre 123', '1122334455', 'ana@farmacia.com', '1234', 'Administrador'),
+('Juan', 'Pérez', '28999111', 'Calle 45', '1133445566', 'juan@farmacia.com', '1234', 'Farmaceutico'),
+('Carla', 'Díaz', '27000111', 'Av. Rivadavia 742', '1144556677', 'carla@farmacia.com', '1234', 'Empleado');
 
 -- Clientes
 INSERT INTO Cliente (nombre, apellido, tipoDocumento, nroDocumento, telefono, email, direccion) VALUES
