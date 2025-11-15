@@ -1,36 +1,30 @@
 <?php
 class Compra {
     private mysqli $db;
-    public function __construct(mysqli $db){ $this->db = $db; }
+    public function __construct(mysqli $db){ 
+        $this->db = $db; 
+        mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+        $this->db->set_charset("utf8mb4");
+    }
 
     /* === Datos base === */
     public function proveedores(): mysqli_result {
         return $this->db->query("SELECT id, razonSocial FROM Proveedor ORDER BY razonSocial");
     }
 
-    // Productos (con categoría, stock) y si hay proveedor seleccionado, prioriza los asociados
+    // Productos (con categoría, stock y lote más próximo)
     public function productos(?int $proveedor_id=null): mysqli_result {
-        if ($proveedor_id) {
-            $sql = "SELECT p.id, p.nombre, p.precio, p.stock_actual, p.stock_minimo,
-                           c.nombre AS categoria, 1 AS asociado
-                    FROM Producto p
-                    LEFT JOIN Categoria c ON c.id=p.categoria_id
-                    INNER JOIN ProductoProveedor pp ON pp.producto_id=p.id
-                    WHERE pp.proveedor_id=$proveedor_id
-                    UNION ALL
-                    SELECT p.id, p.nombre, p.precio, p.stock_actual, p.stock_minimo,
-                           c.nombre AS categoria, 0 AS asociado
-                    FROM Producto p
-                    LEFT JOIN Categoria c ON c.id=p.categoria_id
-                    WHERE p.id NOT IN (SELECT producto_id FROM ProductoProveedor WHERE proveedor_id=$proveedor_id)
-                    ORDER BY asociado DESC, nombre ASC";
-        } else {
-            $sql = "SELECT p.id, p.nombre, p.precio, p.stock_actual, p.stock_minimo,
-                           c.nombre AS categoria, 0 AS asociado
-                    FROM Producto p
-                    LEFT JOIN Categoria c ON c.id=p.categoria_id
-                    ORDER BY p.nombre ASC";
-        }
+        $sql = "SELECT p.id, p.nombre, p.precio, p.stock_actual, p.stock_minimo,
+                       c.nombre AS categoria, 0 AS asociado,
+                       l.numero_lote, l.fecha_vencimiento, l.cantidad_actual
+                FROM Producto p
+                LEFT JOIN Categoria c ON c.id=p.categoria_id
+                LEFT JOIN Lote l ON l.producto_id=p.id
+                WHERE l.fecha_vencimiento = (
+                    SELECT MIN(l2.fecha_vencimiento)
+                    FROM Lote l2 WHERE l2.producto_id = p.id
+                )
+                ORDER BY p.nombre ASC";
         return $this->db->query($sql);
     }
 
@@ -75,10 +69,13 @@ class Compra {
         $this->db->begin_transaction();
         try {
             $hoy = (new DateTime())->format('Y-m-d');
-            $st = $this->db->prepare("INSERT INTO OrdenCompra(proveedor_id, fecha, total, estado, observaciones) VALUES(?, ?, 0, 'Recibida', ?)");
-            $st->bind_param("iss", $proveedor_id, $hoy, $obs);
-            $st->execute();
-            $orden_id = $st->insert_id;
+           $st = $this->db->prepare("
+    INSERT INTO OrdenCompra (proveedor_id, usuario_id, fecha, total, estado, observaciones)
+    VALUES (?, ?, ?, 0, 'Recibida', ?)
+");
+$st->bind_param("iiss", $proveedor_id, $usuario_id, $hoy, $obs);
+$st->execute();
+$orden_id = $st->insert_id;
 
             $total = 0.0;
 
@@ -116,12 +113,6 @@ class Compra {
                     $stL->bind_param("issii", $pid, $lote, $vto, $cant, $cant);
                     $stL->execute();
                 }
-
-                // RF04.02: asociar proveedor
-                $this->db->query("INSERT IGNORE INTO ProductoProveedor(producto_id, proveedor_id, precio_ultimo)
-                                  VALUES ($pid, $proveedor_id, $costo)");
-                $this->db->query("UPDATE ProductoProveedor SET precio_ultimo=$costo
-                                  WHERE producto_id=$pid AND proveedor_id=$proveedor_id");
             }
 
             // total en OC
@@ -139,19 +130,20 @@ class Compra {
 
     /* === NUEVO: Catálogo detallado por proveedor === */
     public function catalogoPorProveedor(int $proveedor_id): mysqli_result {
-        $sql = "SELECT p.id, p.nombre, p.presentacion, p.precio, 
+        $sql = "SELECT p.id, p.nombre, p.precio, 
                        p.stock_actual, p.stock_minimo,
                        c.nombre AS categoria, 
-                       l.numero_lote, l.fecha_vencimiento,
-                       IF(pp.proveedor_id IS NULL,0,1) AS asociado
+                       l.numero_lote, l.fecha_vencimiento, l.cantidad_actual,
+                       0 AS asociado
                 FROM Producto p
                 LEFT JOIN Categoria c ON c.id=p.categoria_id
-                LEFT JOIN ProductoProveedor pp 
-                       ON pp.producto_id=p.id AND pp.proveedor_id=?
                 LEFT JOIN Lote l ON l.producto_id=p.id
+                WHERE l.fecha_vencimiento = (
+                    SELECT MIN(l2.fecha_vencimiento)
+                    FROM Lote l2 WHERE l2.producto_id=p.id
+                )
                 ORDER BY c.nombre, p.nombre ASC";
         $st = $this->db->prepare($sql);
-        $st->bind_param("i",$proveedor_id);
         $st->execute();
         return $st->get_result();
     }

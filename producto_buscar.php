@@ -8,7 +8,7 @@ class Producto {
 
     /**
      * RF01.01 - Obtener productos con categoría y lotes
-     * (Optimizada para FARVEC: productos nuevos primero, lotes ordenados por vencimiento)
+     * Productos nuevos primero (orden por ID), lotes agrupados sin modificar orden global
      */
     public function obtenerProductosConLotes() {
         $sql = "
@@ -29,9 +29,7 @@ class Producto {
             LEFT JOIN Lote l 
                 ON l.producto_id = p.id
             ORDER BY 
-                p.id DESC,
-                l.fecha_vencimiento ASC,
-                l.id ASC
+                p.id DESC
         ";
         return $this->conn->query($sql);
     }
@@ -58,34 +56,31 @@ class Producto {
         $ok = $stmt->execute();
 
         if ($ok) {
-            // Actualizar stock
             $this->actualizarStock($producto_id, $cantidad_inicial, "compra");
-            // Registrar en historial
             $this->registrarMovimiento($producto_id, "Alta", $cantidad_inicial, "Ingreso lote $numero_lote");
         }
+
         return $ok;
     }
 
     /**
-     * RF01.02 - Actualizar stock después de venta o compra
+     * RF01.02 - Actualizar stock
      */
     public function actualizarStock($producto_id, $cantidad, $operacion = "venta") {
-        if ($operacion === "venta") {
-            $sql = "UPDATE Producto SET stock_actual = stock_actual - ? WHERE id = ?";
-        } else {
-            $sql = "UPDATE Producto SET stock_actual = stock_actual + ? WHERE id = ?";
-        }
+        $sql = ($operacion === "venta")
+            ? "UPDATE Producto SET stock_actual = stock_actual - ? WHERE id = ?"
+            : "UPDATE Producto SET stock_actual = stock_actual + ? WHERE id = ?";
+
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("ii", $cantidad, $producto_id);
         return $stmt->execute();
     }
 
     /**
-     * RF01.03 - Productos en stock mínimo o menor
+     * RF01.03 - Productos en stock mínimo
      */
     public function obtenerProductosStockMinimo() {
-        $sql = "SELECT * FROM Producto WHERE stock_actual <= stock_minimo";
-        return $this->conn->query($sql);
+        return $this->conn->query("SELECT * FROM Producto WHERE stock_actual <= stock_minimo");
     }
 
     /**
@@ -100,16 +95,14 @@ class Producto {
     }
 
     /**
-     * RF01.05 - Registrar devolución/baja
+     * RF01.05 - Registrar devolución
      */
     public function registrarDevolucion($lote_id, $cantidad) {
-        // Reducir cantidad en lote
         $sql = "UPDATE Lote SET cantidad_actual = cantidad_actual - ? WHERE id = ?";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("ii", $cantidad, $lote_id);
         $stmt->execute();
 
-        // Reducir stock en producto
         $sql2 = "UPDATE Producto p 
                  JOIN Lote l ON p.id = l.producto_id 
                  SET p.stock_actual = p.stock_actual - ? 
@@ -118,16 +111,14 @@ class Producto {
         $stmt2->bind_param("ii", $cantidad, $lote_id);
         $stmt2->execute();
 
-        // Obtener producto y registrar historial
         $producto_id = $this->obtenerProductoPorLote($lote_id);
-        $this->registrarMovimiento($producto_id, "Baja", $cantidad, "Devolución/Baja del lote ID $lote_id");
+        $this->registrarMovimiento($producto_id, "Baja", $cantidad, "Devolución del lote ID $lote_id");
 
         return true;
     }
 
     /**
-     * RF01.06 - Insertar historial de movimientos
-     * (usuario_id queda NULL, la columna lo permite)
+     * RF01.06 - Registrar historial
      */
     public function registrarMovimiento($producto_id, $tipo, $cantidad, $detalle = "") {
         $sql = "INSERT INTO HistorialStock (producto_id, tipo, cantidad, detalle, fecha) 
@@ -138,7 +129,7 @@ class Producto {
     }
 
     /**
-     * Auxiliar - Obtener producto a partir de un lote
+     * Auxiliar - Obtener producto por lote
      */
     private function obtenerProductoPorLote($lote_id) {
         $sql = "SELECT producto_id FROM Lote WHERE id = ?";

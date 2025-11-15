@@ -34,12 +34,10 @@ while ($row = $res->fetch_assoc()) {
   $unitsCount += (int)$row['cantidad'];
 }
 
-// Desglose estimado (visual)
 $subtotalEst = $venta['total'] > 0 ? round($venta['total'] / 1.21, 2) : 0;
 $ivaEst      = $venta['total'] - $subtotalEst;
-
-$clienteNom = $venta['cliente'] ? ($venta['cliente'].' '.$venta['apellido']) : 'Consumidor Final';
-$estado = $venta['estado'] ?? 'Pendiente';
+$clienteNom  = $venta['cliente'] ? ($venta['cliente'].' '.$venta['apellido']) : 'Consumidor Final';
+$estado      = $venta['estado'] ?? 'Pendiente';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -52,177 +50,185 @@ $estado = $venta['estado'] ?? 'Pendiente';
 
 <style>
 :root{
-  --verde:#008f4c; --verde-oscuro:#006837; --acento:#e85c4a;
-  --bg:#f3f6f4; --card:#ffffff; --text:#1f2937; --muted:#6b7280; --borde:#e5e7eb;
-  --ok:#16a34a; --warn:#f59e0b; --danger:#dc2626;
+  --azul:#2563eb;
+  --azul-claro:#3b82f6;
+  --borde:#d1d5db;
+  --negro:#0a0a0a;
+  --card:rgba(255,255,255,0.85);
+  --verde:#22c55e;
+  --rojo:#ef4444;
+  --naranja:#fbbf24;
 }
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0; font-family:Segoe UI,system-ui,-apple-system,sans-serif;
-  background:linear-gradient(180deg,#f4faf6 0%, #eef5f1 35%, #f7f8f9 100%);
-  color:var(--text);
-  animation:fadeIn .4s ease;
-}
-.container{max-width:1200px;margin:0 auto;padding:14px}
 
-/* Topbar */
-.topbar{display:flex;align-items:center;gap:12px;padding:10px 0}
-.btn{border:1px solid var(--borde); background:#fff; color:#111; padding:9px 12px; border-radius:10px; cursor:pointer}
-.btn i{margin-right:6px}
-.btn.primary{background:var(--verde); border-color:var(--verde); color:#fff}
-.btn.warn{background:var(--warn); border-color:var(--warn); color:#fff}
-.btn.ghost{background:#fff}
-.btn:hover{filter:brightness(.98)}
+/* ===== Fondo ===== */
+html,body{height:100%;min-height:100vh;}
+body{
+  margin:0;
+  font-family:Segoe UI,system-ui,-apple-system,sans-serif;
+  background:linear-gradient(180deg,#8dd3ff 0%,#63b3ed 40%,#2563eb 100%);
+  color:var(--negro);
+  position:relative;
+  overflow-x:hidden;
+}
+.bg-pastillas{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg width='160' height='160' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff20'%3E%3Cellipse cx='30' cy='30' rx='12' ry='5' transform='rotate(30 30 30)'/%3E%3Cellipse cx='90' cy='25' rx='10' ry='4' transform='rotate(-25 90 25)'/%3E%3Cellipse cx='60' cy='90' rx='8' ry='3.5' transform='rotate(40 60 90)'/%3E%3Crect x='70' y='60' width='16' height='6' rx='3' transform='rotate(45 70 60)'/%3E%3Ccircle cx='40' cy='110' r='5'/%3E%3Ccircle cx='115' cy='100' r='4'/%3E%3C/g%3E%3C/svg%3E");
+  background-size:180px 180px;opacity:.6;
+  animation:pillsMove 60s linear infinite alternate;
+}
+@keyframes pillsMove{0%{background-position:0 0}100%{background-position:200px 200px}}
+
+.container{max-width:1200px;margin:0 auto;padding:20px;position:relative;z-index:2}
+
+/* ===== Botones ===== */
+.btn{
+  border:none;
+  border-radius:10px;
+  padding:10px 14px;
+  font-weight:600;
+  cursor:pointer;
+  color:#fff;
+  text-decoration:none;
+  box-shadow:0 3px 10px rgba(0,0,0,.25);
+  transition:.2s;
+}
+.btn.primary{background:linear-gradient(90deg,#2563eb,#3b82f6);}
+.btn.ghost{background:rgba(255,255,255,.35);color:#0a0a0a;}
+.btn.warn{background:linear-gradient(90deg,#f59e0b,#fbbf24);}
+.btn:hover{filter:brightness(1.05);transform:translateY(-1px);}
+
+/* ===== Topbar ===== */
+.topbar{
+  display:flex;align-items:center;gap:12px;margin-bottom:14px;
+}
 .title{
-  display:flex; align-items:center; gap:10px; font-size:22px; color:#0f5132; margin-left:6px
+  display:flex;align-items:center;gap:10px;
+  font-size:22px;color:#fff;text-shadow:0 0 6px #60a5fa;
 }
 .badge{
-  display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px;
-  font-size:12px; border:1px solid var(--borde); background:#fff; color:#111
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px;border-radius:999px;font-size:12px;
+  background:rgba(255,255,255,.3);color:#fff;border:1px solid #ffffff66;
 }
-.badge.ok{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
-.badge.warn{background:#fff7ed;border-color:#fed7aa;color:#9a3412}
-.badge.danger{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+.badge.ok{color:#16a34a;}
+.badge.warn{color:#f59e0b;}
+.badge.danger{color:#ef4444;}
 
-/* Layout */
-.grid{display:grid; grid-template-columns: 1.6fr .9fr; gap:14px}
-@media (max-width:1024px){ .grid{grid-template-columns:1fr} }
-
+/* ===== Cards ===== */
+.grid{display:grid;grid-template-columns:1.6fr .9fr;gap:16px}
+@media(max-width:1024px){.grid{grid-template-columns:1fr}}
 .card{
-  background:var(--card); border:1px solid var(--borde); border-radius:14px;
-  box-shadow:0 10px 24px rgba(0,0,0,.06);
-  overflow:hidden; animation:rise .35s ease
+  background:var(--card);
+  border:1px solid var(--borde);
+  border-radius:16px;
+  box-shadow:0 8px 25px rgba(0,0,0,.25);
+  backdrop-filter:blur(14px);
+  overflow:hidden;
 }
-.card-header{display:flex; align-items:center; justify-content:space-between;
-  padding:14px 16px; border-bottom:1px solid var(--borde)}
-.card-body{padding:16px}
+.card-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;
+  border-bottom:1px solid var(--borde);
+  background:rgba(255,255,255,.55);
+  color:var(--negro);
+}
+.card-body{padding:18px;color:var(--negro)}
 
-/* Resumen */
-.kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:10px}
-@media (max-width:700px){ .kpis{grid-template-columns:repeat(2,1fr)} }
+/* ===== KPIs ===== */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
+@media(max-width:700px){.kpis{grid-template-columns:repeat(2,1fr)}}
 .kpi{
-  padding:14px; background:#f8fafc; border:1px dashed var(--borde); border-radius:12px
+  padding:14px;
+  border-radius:12px;
+  background:rgba(255,255,255,.9);
+  border:1px solid rgba(0,0,0,.1);
+  color:var(--negro);
 }
-.kpi .label{color:var(--muted); font-size:12px}
-.kpi .value{font-weight:700; font-size:18px; margin-top:4px}
-.kpi .hint{font-size:11px; color:var(--muted)}
+.kpi .label{font-size:13px;font-weight:600;color:#111;}
+.kpi .value{font-size:20px;font-weight:700;color:#000;}
+.kpi .hint{font-size:12px;color:#333;}
 
-/* Info venta */
-.info{display:grid; grid-template-columns:repeat(2,1fr); gap:10px}
-@media (max-width:700px){ .info{grid-template-columns:1fr} }
-.info .row{display:flex; gap:10px; align-items:center; background:#f9fafb; padding:12px; border-radius:10px; border:1px solid var(--borde)}
-.info .lbl{font-weight:600; min-width:100px; color:#0f5132}
-.info .val{color:#111}
+/* ===== Info ===== */
+.info{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
+@media(max-width:700px){.info{grid-template-columns:1fr}}
+.info .row{
+  display:flex;gap:10px;align-items:center;
+  background:rgba(255,255,255,.95);
+  padding:12px;border-radius:10px;border:1px solid #d1d5db;
+  color:var(--negro);
+}
+.info .lbl{font-weight:700;color:#111;}
+.info .val{color:#000;}
 
-/* Tabla items */
-.table{width:100%; border-collapse:collapse}
-.table th,.table td{padding:12px; border-bottom:1px solid var(--borde); text-align:left}
-.table th{background:#eaf7ef; color:#064e3b; font-weight:700}
-.table tfoot td{background:#f9fafb; font-weight:700}
+/* ===== Tabla ===== */
+.table{width:100%;border-collapse:collapse;color:#111;}
+.table th,.table td{padding:12px;border-bottom:1px solid rgba(0,0,0,.1);text-align:left}
+.table th{
+  background:#2563eb;
+  color:#fff;
+  font-weight:700;
+}
+.table tr:hover td{background:rgba(37,99,235,.08);}
+.table tfoot td{background:rgba(255,255,255,.8);font-weight:700;color:#000;}
 .text-right{text-align:right}
-
-/* Acciones */
-.actions{display:flex; gap:8px; flex-wrap:wrap}
-
-/* Print */
-@media print{
-  .topbar, .actions, .right-card{display:none !important}
-  body{background:#fff}
-  .card{box-shadow:none; border-color:#ddd}
-  .container{max-width:100%; padding:0}
-}
-
-/* Animaciones */
-@keyframes fadeIn{from{opacity:0} to{opacity:1}}
-@keyframes rise{from{transform:translateY(6px); opacity:0} to{transform:none; opacity:1}}
 </style>
 </head>
 <body>
+<div class="bg-pastillas"></div>
+
 <div class="container">
 
-  <!-- HEADER -->
   <div class="topbar">
-    <a href="ventas_listar.php" class="btn"><i class="fa-solid fa-arrow-left"></i>Volver</a>
-    <div class="title"><i class="fa-solid fa-receipt" style="color:#006837"></i>
-      <strong>Detalle de Venta #<?= (int)$venta['id'] ?></strong>
-    </div>
+    <a href="ventas_listar.php" class="btn ghost"><i class="fa-solid fa-arrow-left"></i> Volver</a>
+    <div class="title"><i class="fa-solid fa-receipt"></i><strong>Detalle de Venta #<?= (int)$venta['id'] ?></strong></div>
     <span style="margin-left:auto"></span>
-    <?php
-      $cls = $estado==='Pagada' ? 'ok' : ($estado==='Pendiente' ? 'warn' : 'danger');
-    ?>
+    <?php $cls = $estado==='Pagada' ? 'ok' : ($estado==='Pendiente' ? 'warn' : 'danger'); ?>
     <span class="badge <?= $cls ?>"><i class="fa-solid fa-circle-check"></i><?= htmlspecialchars($estado) ?></span>
   </div>
 
   <div class="grid">
 
-    <!-- IZQUIERDA: INFO + ITEMS -->
+    <!-- IZQUIERDA -->
     <section class="card">
       <div class="card-header">
         <div style="display:flex;align-items:center;gap:8px">
-          <i class="fa-solid fa-circle-info" style="color:#006837"></i>
+          <i class="fa-solid fa-circle-info"></i>
           <strong>Datos de la venta</strong>
         </div>
-        <div class="actions">
-          <button class="btn ghost" onclick="window.print()"><i class="fa-solid fa-print"></i> Imprimir / PDF</button>
-          <a class="btn" href="ventas.php"><i class="fa-solid fa-plus"></i> Nueva venta</a>
+        <div style="display:flex;gap:8px">
+          <button class="btn ghost" onclick="window.print()"><i class="fa-solid fa-print"></i> PDF</button>
+          <a class="btn primary" href="ventas.php"><i class="fa-solid fa-plus"></i> Nueva venta</a>
         </div>
       </div>
       <div class="card-body">
 
-        <!-- KPIs -->
-        <div class="kpis" style="margin-bottom:12px">
-          <div class="kpi">
-            <div class="label">Total venta</div>
-            <div class="value">$<?= number_format((float)$venta['total'],2) ?></div>
-            <div class="hint">Importe final</div>
-          </div>
-          <div class="kpi">
-            <div class="label">Ítems</div>
-            <div class="value"><?= (int)$itemsCount ?></div>
-            <div class="hint">Productos diferentes</div>
-          </div>
-          <div class="kpi">
-            <div class="label">Unidades</div>
-            <div class="value"><?= (int)$unitsCount ?></div>
-            <div class="hint">Cantidades totales</div>
-          </div>
-          <div class="kpi">
-            <div class="label">Fecha</div>
-            <div class="value"><?= htmlspecialchars($venta['fecha']) ?></div>
-            <div class="hint">Usuario: <?= htmlspecialchars($venta['usuario']) ?></div>
-          </div>
+        <div class="kpis">
+          <div class="kpi"><div class="label">Total</div><div class="value">$<?= number_format((float)$venta['total'],2) ?></div><div class="hint">Importe final</div></div>
+          <div class="kpi"><div class="label">Ítems</div><div class="value"><?= (int)$itemsCount ?></div><div class="hint">Productos diferentes</div></div>
+          <div class="kpi"><div class="label">Unidades</div><div class="value"><?= (int)$unitsCount ?></div><div class="hint">Cantidades totales</div></div>
+          <div class="kpi"><div class="label">Fecha</div><div class="value"><?= htmlspecialchars($venta['fecha']) ?></div><div class="hint">Usuario: <?= htmlspecialchars($venta['usuario']) ?></div></div>
         </div>
 
-        <!-- INFO -->
-        <div class="info" style="margin-bottom:12px">
-          <div class="row"><div class="lbl"><i class="fa-solid fa-user"></i> Cliente</div>
-            <div class="val"><?= htmlspecialchars($clienteNom) ?></div></div>
-          <div class="row"><div class="lbl"><i class="fa-solid fa-id-card-clip"></i> N° Venta</div>
-            <div class="val">#<?= (int)$venta['id'] ?></div></div>
+        <div class="info">
+          <div class="row"><div class="lbl"><i class="fa-solid fa-user"></i> Cliente</div><div class="val"><?= htmlspecialchars($clienteNom) ?></div></div>
+          <div class="row"><div class="lbl"><i class="fa-solid fa-id-card-clip"></i> N° Venta</div><div class="val">#<?= (int)$venta['id'] ?></div></div>
         </div>
 
-        <!-- DESGLOSE (visual) -->
-        <div class="info" style="margin-bottom:12px">
-          <div class="row"><div class="lbl"><i class="fa-solid fa-money-bill-wave"></i> Subtotal (est.)</div>
-            <div class="val">$<?= number_format($subtotalEst,2) ?></div></div>
-          <div class="row"><div class="lbl"><i class="fa-solid fa-percent"></i> IVA 21% (est.)</div>
-            <div class="val">$<?= number_format($ivaEst,2) ?></div></div>
+        <div class="info">
+          <div class="row"><div class="lbl"><i class="fa-solid fa-money-bill-wave"></i> Subtotal</div><div class="val">$<?= number_format($subtotalEst,2) ?></div></div>
+          <div class="row"><div class="lbl"><i class="fa-solid fa-percent"></i> IVA 21%</div><div class="val">$<?= number_format($ivaEst,2) ?></div></div>
         </div>
 
-        <!-- ITEMS -->
-        <div class="card" style="border:none; box-shadow:none">
-          <div class="card-header" style="border-radius:12px 12px 0 0">
-            <div style="display:flex;align-items:center;gap:8px"><i class="fa-solid fa-basket-shopping" style="color:#006837"></i><strong>Productos</strong></div>
-          </div>
+        <div class="card" style="border:none;box-shadow:none;margin-top:10px;background:rgba(255,255,255,.9)">
+          <div class="card-header" style="background:#2563eb;color:#fff"><i class="fa-solid fa-basket-shopping"></i><strong>Productos</strong></div>
           <div class="card-body" style="padding:0">
             <table class="table">
               <thead>
                 <tr>
                   <th>Producto</th>
-                  <th class="text-right" style="width:120px">Cantidad</th>
-                  <th class="text-right" style="width:140px">Precio</th>
-                  <th class="text-right" style="width:150px">Subtotal</th>
+                  <th class="text-right">Cantidad</th>
+                  <th class="text-right">Precio</th>
+                  <th class="text-right">Subtotal</th>
                 </tr>
               </thead>
               <tbody>
@@ -248,30 +254,27 @@ body{
       </div>
     </section>
 
-    <!-- DERECHA: ACCIONES RÁPIDAS / NOTAS -->
-    <aside class="card right-card">
+    <!-- DERECHA -->
+    <aside class="card">
       <div class="card-header">
         <div style="display:flex;align-items:center;gap:8px">
-          <i class="fa-solid fa-toolbox" style="color:#006837"></i>
-          <strong>Acciones rápidas</strong>
+          <i class="fa-solid fa-toolbox"></i><strong>Acciones rápidas</strong>
         </div>
       </div>
       <div class="card-body">
-        <div class="actions" style="margin-bottom:10px">
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px">
           <button class="btn primary" onclick="window.print()"><i class="fa-solid fa-file-pdf"></i> Exportar PDF</button>
-          <a class="btn" href="ventas.php"><i class="fa-solid fa-plus"></i> Nueva Venta</a>
+          <a class="btn ghost" href="ventas.php"><i class="fa-solid fa-plus"></i> Nueva Venta</a>
           <a class="btn ghost" href="ventas_listar.php"><i class="fa-solid fa-list"></i> Listado</a>
         </div>
-
-        <div class="kpi" style="margin-top:8px">
+        <div class="kpi">
           <div class="label">Observación</div>
-          <div class="hint">Si necesitás mostrar un código en el comprobante, podés imprimir esta vista en PDF. El desglose de IVA mostrado es sólo orientativo.</div>
+          <div class="hint">El desglose de IVA mostrado es orientativo. Podés imprimir esta vista como comprobante PDF.</div>
         </div>
       </div>
     </aside>
 
-  </div><!-- grid -->
-</div><!-- container -->
-
+  </div>
+</div>
 </body>
 </html>

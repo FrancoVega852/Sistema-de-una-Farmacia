@@ -44,31 +44,139 @@ $det = $st->get_result();
 <head>
 <meta charset="UTF-8">
 <title>Orden de Compra #<?= $oc['id'] ?> - Farvec</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
 <style>
-:root{ --verde:#008f4c; --osc:#006837; --borde:#e5e7eb; --txt:#1f2937; --muted:#6b7280 }
-body{margin:0;font-family:Segoe UI,system-ui,Arial;background:#f5f7f8;color:var(--txt)}
-.top{display:flex;align-items:center;gap:12px;background:#fff;padding:14px 18px;border-bottom:1px solid var(--borde)}
-.top h1{font-size:20px;color:var(--osc);margin:0;display:flex;align-items:center;gap:8px}
-.back{background:var(--osc);color:#fff;border:0;border-radius:10px;padding:10px 14px;cursor:pointer}
-.wrap{max-width:1200px;margin:20px auto;padding:0 14px;display:flex;flex-direction:column;gap:16px}
-.card{background:#fff;border:1px solid var(--borde);border-radius:14px;box-shadow:0 6px 16px rgba(0,0,0,.06);padding:14px}
-.card h3{margin:0 0 10px 0;color:var(--osc)}
-.table{width:100%;border-collapse:collapse;margin-top:8px}
-.table th,.table td{padding:10px;border-bottom:1px solid var(--borde);text-align:left;font-size:14px}
-.table th{background:#f0fdf4;color:#064e3b}
-.total{font-size:18px;font-weight:800;text-align:right;margin-top:10px}
-.actions{display:flex;gap:10px;margin-top:10px}
-.btn{padding:10px 12px;border-radius:10px;border:1px solid var(--borde);cursor:pointer}
-.btn.primary{background:var(--verde);color:#fff;border-color:var(--verde)}
-.btn.print{background:#2563eb;color:#fff;border-color:#2563eb}
+:root{
+  --brand:#0ea5a6;
+  --brand-dark:#0b8384;
+  --bg1:#0f172a;
+  --bg2:#0b1222;
+  --text:#e5e7eb;
+  --muted:#94a3b8;
+  --accent:#38bdf8;
+  --ok:#22c55e;
+  --warn:#fbbf24;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:'Inter',system-ui,Arial;
+  color:var(--text);
+  background:linear-gradient(180deg,#0b1020 0%,#0f172a 100%);
+  overflow-x:hidden;
+}
+
+/* Fondo animado */
+body::before,body::after{
+  content:'';position:fixed;inset:auto;z-index:-1;
+  width:480px;height:480px;border-radius:50%;
+  filter:blur(80px);opacity:.35;
+  background:radial-gradient(circle at 40% 40%,#0ea5a666 0%,transparent 70%);
+  animation:float1 25s ease-in-out infinite;
+}
+body::after{
+  right:-120px;bottom:-60px;
+  background:radial-gradient(circle at 60% 60%,#38bdf855 0%,transparent 70%);
+  animation:float2 30s ease-in-out infinite;
+}
+@keyframes float1{0%,100%{transform:translate(0,0)}50%{transform:translate(25px,-20px)}}
+@keyframes float2{0%,100%{transform:translate(0,0)}50%{transform:translate(-25px,20px)}}
+
+/* Header */
+.top{
+  display:flex;align-items:center;gap:14px;
+  padding:16px 20px;
+  position:sticky;top:0;
+  backdrop-filter:blur(8px);
+  background:linear-gradient(180deg,rgba(11,16,32,.8) 0%,rgba(11,16,32,.4) 100%);
+  border-bottom:1px solid rgba(56,189,248,.15);
+  box-shadow:0 8px 25px rgba(0,0,0,.25);
+}
+.back{
+  background:linear-gradient(135deg,var(--brand-dark),var(--brand));
+  color:#fff;border:0;border-radius:10px;
+  padding:10px 14px;cursor:pointer;font-weight:600;
+  transition:.25s ease;box-shadow:0 6px 16px rgba(14,165,166,.25);
+}
+.back:hover{transform:translateY(-1px);box-shadow:0 10px 25px rgba(14,165,166,.4)}
+.top h1{margin:0;font-size:20px;font-weight:800;display:flex;align-items:center;gap:10px}
+.top h1 i{color:#67e8f9}
+
+/* Container */
+.wrap{max-width:1100px;margin:24px auto;padding:0 18px;display:flex;flex-direction:column;gap:20px}
+
+/* Card */
+.card{
+  background:rgba(11,19,36,.6);
+  border:1px solid rgba(56,189,248,.15);
+  border-radius:16px;
+  box-shadow:0 20px 60px rgba(0,0,0,.3);
+  padding:20px;
+  backdrop-filter:blur(10px);
+  animation:fadeUp .6s ease both;
+}
+.card h3{margin:0 0 14px;font-size:18px;color:#67e8f9}
+.card p{margin:6px 0;font-size:15px;color:#e2e8f0}
+
+/* Tabla */
+.table{width:100%;border-collapse:collapse;margin-top:10px}
+.table th,.table td{padding:12px;text-align:left;font-size:14px}
+.table th{
+  background:#031225;color:#67e8f9;
+  text-transform:uppercase;letter-spacing:.3px;
+  font-size:12px;
+}
+.table td{border-bottom:1px solid rgba(56,189,248,.1)}
+.table tbody tr{transition:background .2s ease}
+.table tbody tr:hover{background:rgba(14,165,166,.1)}
+
+/* Total */
+.total{font-size:20px;font-weight:800;text-align:right;margin-top:14px;color:#38bdf8}
+
+/* Buttons */
+.actions{display:flex;gap:12px;margin-top:14px}
+.btn{
+  padding:10px 14px;border-radius:10px;border:0;cursor:pointer;
+  font-weight:600;font-size:14px;transition:.25s ease;
+}
+.btn.print{
+  background:linear-gradient(135deg,#38bdf8,#0ea5a6);
+  color:#002b2f;box-shadow:0 8px 25px rgba(56,189,248,.25);
+}
+.btn.primary{
+  background:linear-gradient(135deg,#22d3ee,#0ea5a6);
+  color:#002c2e;box-shadow:0 8px 25px rgba(34,211,238,.25);
+}
+.btn:hover{transform:translateY(-1px);opacity:.95}
+
+/* Animaciones */
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 </style>
 </head>
+<div id="toast-ok" style="position:fixed;right:16px;bottom:16px;background:#00a86b;color:#fff;
+  padding:12px 16px;border-radius:12px;font-weight:800;display:none;box-shadow:0 10px 26px rgba(0,0,0,.18)">
+  Compra registrada con éxito
+</div>
+<script>
+  (function(){
+    const ok = new URLSearchParams(location.search).get('ok');
+    if(ok==='1'){
+      const t=document.getElementById('toast-ok');
+      t.style.display='block';
+      setTimeout(()=>t.style.display='none',2000);
+    }
+  })();
+</script>
+
 <body>
 
 <div class="top">
   <a href="compras_listar.php"><button class="back"><i class="fa-solid fa-arrow-left"></i> Volver</button></a>
-  <h1><i class="fa-solid fa-truck"></i> Orden de Compra #<?= $oc['id'] ?></h1>
+  <h1><i class="fa-solid fa-file-invoice-dollar"></i> Orden de Compra #<?= $oc['id'] ?></h1>
 </div>
 
 <div class="wrap">
@@ -128,6 +236,5 @@ body{margin:0;font-family:Segoe UI,system-ui,Arial;background:#f5f7f8;color:var(
   </div>
 
 </div>
-
 </body>
 </html>

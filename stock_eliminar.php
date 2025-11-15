@@ -24,12 +24,12 @@ $conexion    = $conn->conexion;
 $productoObj = new Producto($conexion);
 $loteObj     = new Lote($conexion);
 
-// Opcional pero útil para manejo con excepciones
+// Manejo seguro de errores
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $conexion->set_charset('utf8mb4');
 
 try {
-    // 1) Obtener datos del producto (nombre)
+    // 1️⃣ Obtener datos del producto
     $stmtProd = $conexion->prepare("SELECT nombre FROM Producto WHERE id = ? LIMIT 1");
     $stmtProd->bind_param("i", $producto_id);
     $stmtProd->execute();
@@ -39,14 +39,14 @@ try {
         die("❌ Producto no encontrado.");
     }
 
-    // 2) Total en lotes (para historial)
+    // 2️⃣ Total en lotes (para historial)
     $stmtSum = $conexion->prepare("SELECT COALESCE(SUM(cantidad_actual),0) AS total FROM Lote WHERE producto_id = ?");
     $stmtSum->bind_param("i", $producto_id);
     $stmtSum->execute();
     $totalLotes = $stmtSum->get_result()->fetch_assoc();
     $cantidadEliminada = (int)($totalLotes['total'] ?? 0);
 
-    // 3) Transacción: borrar lotes + borrar producto (ambos o ninguno)
+    // 3️⃣ Iniciar transacción
     $conexion->begin_transaction();
 
     // 3.a) Eliminar lotes asociados
@@ -59,16 +59,26 @@ try {
     $stmtDelProd->bind_param("i", $producto_id);
     $stmtDelProd->execute();
 
-    // Si llegó acá sin excepción, confirmar cambios
+    // 4️⃣ Confirmar cambios
     $conexion->commit();
 
-    // 4) Registrar movimiento en historial (fuera de la transacción)
-    //    Si tu HistorialStock tiene FK a Producto (RESTRICT), este insert puede fallar (1452).
-    //    Lo capturamos y lo ignoramos para no romper el flujo.
+    // 5️⃣ Registrar acción en archivo de auditoría (seguimiento)
+    $usuario_id = $_SESSION["usuario_id"];
+    $usuario_nombre = $_SESSION["usuario_nombre"] ?? 'Desconocido';
+    $fecha = date("Y-m-d H:i:s");
+    $nombreProd = $producto['nombre'];
+
+    $registro = "[{$fecha}] Usuario #{$usuario_id} ({$usuario_nombre}) eliminó el producto '{$nombreProd}' (ID={$producto_id}), cantidad total eliminada: {$cantidadEliminada}\n";
+    
+    // Guardar en archivo dentro de /logs (crealo si no existe)
+    $logFile = __DIR__ . "/logs/auditoria_eliminaciones.log";
+    if (!is_dir(__DIR__ . "/logs")) mkdir(__DIR__ . "/logs", 0777, true);
+    file_put_contents($logFile, $registro, FILE_APPEND);
+
+    // 6️⃣ Registrar también en HistorialStock (si la FK lo permite)
     try {
         $tipo    = "Baja";
-        $detalle = "Eliminación del producto '" . $producto['nombre'] . "' y sus lotes asociados";
-
+        $detalle = "Eliminación del producto '{$nombreProd}' y sus lotes asociados";
         $stmtHist = $conexion->prepare("
             INSERT INTO HistorialStock (producto_id, tipo, cantidad, detalle, fecha)
             VALUES (?, ?, ?, ?, NOW())
@@ -76,32 +86,20 @@ try {
         $stmtHist->bind_param("isis", $producto_id, $tipo, $cantidadEliminada, $detalle);
         $stmtHist->execute();
     } catch (mysqli_sql_exception $e) {
-        // 1452 = Cannot add or update a child row: a foreign key constraint fails
-        if ((int)$e->getCode() !== 1452) {
-            // Si es otro error, relanzar
-            throw $e;
-        }
-        // Si es 1452, solo ignoramos el historial (el borrado ya fue exitoso)
+        if ((int)$e->getCode() !== 1452) throw $e;
     }
 
     header("Location: Stock.php?msg=eliminado");
     exit();
 
 } catch (mysqli_sql_exception $e) {
-    // Si algo falló durante la transacción, revertimos
-    if ($conexion->errno) {
-        // Si la transacción estaba abierta, intentar rollback
-        try { $conexion->rollback(); } catch (Throwable $t) {}
-    }
+    try { $conexion->rollback(); } catch (Throwable $t) {}
 
-    // 1451 = Cannot delete or update a parent row: a foreign key constraint fails
     if ((int)$e->getCode() === 1451) {
-        // Caso típico: el producto está referenciado por ventas/compras, etc.
-        // No borramos nada (lotes quedan intactos por el rollback).
         die("❌ No se pudo eliminar el producto porque está referenciado por otros registros (ventas/compras/historial).
-            <br>💡 Sugerencia: desactívalo en lugar de borrarlo (baja lógica) o elimina primero las referencias.");
+            <br>💡 Sugerencia: desactívalo en lugar de borrarlo o elimina primero las referencias.");
     }
 
-    // Otro error
     die("❌ Error al eliminar el producto. Detalle: " . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
 }
+?>
