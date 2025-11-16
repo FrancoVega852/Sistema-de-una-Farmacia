@@ -4,307 +4,387 @@ require_once 'Conexion.php';
 require_once 'Producto.php';
 require_once 'Lote.php';
 
-if (!isset($_SESSION["usuario_id"])) {
-    header("Location: login.php");
-    exit();
-}
-if ($_SESSION["usuario_rol"] !== "Administrador") {
-    die("⛔ No tienes permisos para acceder a esta página.");
+if (!isset($_SESSION["usuario_id"])) { exit("ERROR-LOGIN"); }
+// si querés permitir también Farmacéutico:
+if (!in_array($_SESSION["usuario_rol"], ["Administrador","Farmaceutico"])) {
+    exit("ERROR-PERMS");
 }
 
-$conn        = new Conexion();
-$productoObj = new Producto($conn->conexion);
-$loteObj     = new Lote($conn->conexion);
+$conn = new Conexion();
+$db   = $conn->conexion;
 
-$mensaje = "";
-$exito   = false;
-
-$producto_id = $_GET['id'] ?? null;
-if (!$producto_id) {
-    die("⚠️ No se especificó el producto a editar.");
-}
-
-$producto = $conn->conexion->query("SELECT * FROM Producto WHERE id=$producto_id")->fetch_assoc();
-if (!$producto) die("❌ Producto no encontrado.");
-
-$lote = $conn->conexion->query("SELECT * FROM Lote WHERE producto_id=$producto_id LIMIT 1")->fetch_assoc();
-
-$categorias = $conn->conexion->query("SELECT id, nombre FROM Categoria ORDER BY nombre ASC");
-
+/* ==========================================================
+   MODO AJAX (POST): GUARDAR CAMBIOS Y DEVOLVER JSON
+========================================================== */
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $nombre           = $_POST["nombre"];
-    $precio           = $_POST["precio"];
-    $stock_minimo     = $_POST["stock_minimo"];
-    $requiere_receta  = isset($_POST["requiere_receta"]) ? 1 : 0;
-    $categoria_id     = $_POST["categoria_id"];
 
-    $numero_lote       = $_POST["numero_lote"];
-    $fecha_vencimiento = $_POST["fecha_vencimiento"];
-    $cantidad_actual   = $_POST["cantidad_actual"];
+    header("Content-Type: application/json; charset=utf-8");
 
+    $producto_id = isset($_POST["producto_id"]) ? (int)$_POST["producto_id"] : 0;
+    if ($producto_id <= 0) {
+        echo json_encode(["ok"=>false,"msg"=>"ID de producto inválido."]);
+        exit;
+    }
+
+    $nombre          = trim($_POST["nombre"] ?? "");
+    $precio          = (float)($_POST["precio"] ?? 0);
+    $stock_minimo    = isset($_POST["stock_minimo"]) ? (int)$_POST["stock_minimo"] : 0;
+    $requiere_receta = !empty($_POST["requiere_receta"]) ? 1 : 0;
+    $categoria_id    = isset($_POST["categoria_id"]) ? (int)$_POST["categoria_id"] : 0;
+
+    $numero_lote       = trim($_POST["numero_lote"] ?? "");
+    $fecha_vencimiento = $_POST["fecha_vencimiento"] ?? "";
+    $cantidad_actual   = isset($_POST["cantidad_actual"]) ? (int)$_POST["cantidad_actual"] : 0;
+    $lote_id           = isset($_POST["lote_id"]) ? (int)$_POST["lote_id"] : 0;
+
+    // Validaciones básicas
+    if ($nombre === "") {
+        echo json_encode(["ok"=>false,"msg"=>"Ingresá el nombre del producto."]);
+        exit;
+    }
+    if ($precio <= 0) {
+        echo json_encode(["ok"=>false,"msg"=>"Precio inválido."]);
+        exit;
+    }
+    if ($stock_minimo < 0) {
+        echo json_encode(["ok"=>false,"msg"=>"Stock mínimo inválido."]);
+        exit;
+    }
+    if ($categoria_id <= 0) {
+        echo json_encode(["ok"=>false,"msg"=>"Seleccioná una categoría."]);
+        exit;
+    }
+    if ($numero_lote === "") {
+        echo json_encode(["ok"=>false,"msg"=>"Número de lote requerido."]);
+        exit;
+    }
+    if ($fecha_vencimiento === "") {
+        echo json_encode(["ok"=>false,"msg"=>"Seleccioná la fecha de vencimiento."]);
+        exit;
+    }
+    if ($cantidad_actual < 0) {
+        echo json_encode(["ok"=>false,"msg"=>"Cantidad inválida."]);
+        exit;
+    }
+
+    // UPDATE Producto (mismo funcionamiento que tu versión original)
     $sqlProd = "UPDATE Producto 
                 SET nombre=?, precio=?, stock_minimo=?, requiere_receta=?, categoria_id=? 
                 WHERE id=?";
-    $stmt = $conn->conexion->prepare($sqlProd);
-    $stmt->bind_param("sdiiii", $nombre, $precio, $stock_minimo, $requiere_receta, $categoria_id, $producto_id);
+    $stmt = $db->prepare($sqlProd);
+    if (!$stmt) {
+        echo json_encode(["ok"=>false,"msg"=>"Error al preparar actualización de producto."]);
+        exit;
+    }
+    $stmt->bind_param("sdiiii",
+        $nombre,
+        $precio,
+        $stock_minimo,
+        $requiere_receta,
+        $categoria_id,
+        $producto_id
+    );
     $ok1 = $stmt->execute();
+    $stmt->close();
 
-    if ($lote) {
-        $sqlLote = "UPDATE Lote 
-                    SET numero_lote=?, fecha_vencimiento=?, cantidad_actual=? 
+    // UPDATE / INSERT del lote principal
+    $ok2 = false;
+    if ($lote_id > 0) {
+        $sqlLote = "UPDATE Lote
+                    SET numero_lote=?, fecha_vencimiento=?, cantidad_actual=?
                     WHERE id=?";
-        $stmt2 = $conn->conexion->prepare($sqlLote);
-        $stmt2->bind_param("ssii", $numero_lote, $fecha_vencimiento, $cantidad_actual, $lote['id']);
+        $stmt2 = $db->prepare($sqlLote);
+        if (!$stmt2) {
+            echo json_encode(["ok"=>false,"msg"=>"Error al preparar actualización de lote."]);
+            exit;
+        }
+        $stmt2->bind_param("ssii",
+            $numero_lote,
+            $fecha_vencimiento,
+            $cantidad_actual,
+            $lote_id
+        );
         $ok2 = $stmt2->execute();
+        $stmt2->close();
     } else {
+        // Si no tenía lote, lo creamos (usa tu clase Lote)
+        $loteObj = new Lote($db);
         $ok2 = $loteObj->crear($producto_id, $numero_lote, $fecha_vencimiento, $cantidad_actual);
     }
 
     if ($ok1 && $ok2) {
-        $mensaje = "✅ Producto y lote actualizados correctamente.";
-        $exito   = true;
-        $producto = $conn->conexion->query("SELECT * FROM Producto WHERE id=$producto_id")->fetch_assoc();
-        $lote     = $conn->conexion->query("SELECT * FROM Lote WHERE producto_id=$producto_id LIMIT 1")->fetch_assoc();
+        echo json_encode(["ok"=>true,"msg"=>"Producto y lote actualizados correctamente."]);
     } else {
-        $mensaje = "❌ Error al actualizar los datos.";
+        echo json_encode(["ok"=>false,"msg"=>"Error al actualizar los datos."]);
     }
+    exit;
+}
+
+/* ==========================================================
+   MODO GET: CARGAR DATOS PARA MOSTRAR FORM
+========================================================== */
+$producto_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+if ($producto_id <= 0) {
+    exit("⚠️ No se especificó el producto a editar.");
+}
+
+// Producto
+$stmtProd = $db->prepare("SELECT * FROM Producto WHERE id = ? LIMIT 1");
+$stmtProd->bind_param("i", $producto_id);
+$stmtProd->execute();
+$producto = $stmtProd->get_result()->fetch_assoc();
+$stmtProd->close();
+
+if (!$producto) {
+    exit("❌ Producto no encontrado.");
+}
+
+// Lote principal (el más próximo a vencer)
+$stmtLote = $db->prepare("SELECT * FROM Lote WHERE producto_id = ? ORDER BY fecha_vencimiento ASC LIMIT 1");
+$stmtLote->bind_param("i", $producto_id);
+$stmtLote->execute();
+$lote = $stmtLote->get_result()->fetch_assoc();
+$stmtLote->close();
+
+// Categorías
+$categoriasRes = $db->query("SELECT id, nombre FROM Categoria ORDER BY nombre ASC");
+$categorias = [];
+while ($c = $categoriasRes->fetch_assoc()) $categorias[] = $c;
+
+// IDs y fecha para JS/inputs
+$lote_id_js = $lote ? (int)$lote['id'] : 'null';
+$fechaVal   = '';
+if (!empty($lote['fecha_vencimiento'])) {
+    $fechaVal = date('Y-m-d', strtotime($lote['fecha_vencimiento']));
 }
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<title>Editar Producto - Farvec</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<!-- ==========================================================
+     BOTÓN VOLVER  (igual que en stock_agregar)
+========================================================== -->
+<button id="btnVolverStock" class="btn-back-farvec">
+  <i class="fa-solid fa-arrow-left"></i> Volver al Stock
+</button>
 
-<style>
-:root{
-  --verde:#16a34a;
-  --verde-osc:#0d5d2a;
-  --verde-claro:#44e47b;
-  --verde-neon:#38f19d;
-  --texto:#ffffff;
-  --muted:#eeeeee;
-}
+<!-- ==========================================================
+     FORMULARIO DE EDICIÓN (mismo diseño que stock_agregar)
+========================================================== -->
+<div class="form-modal module-dynamic">
+    <h2 class="title-modal">
+        <i class="fa-solid fa-pen-to-square"></i> Editar producto y lote
+    </h2>
 
-/* GENERAL */
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;min-height:100vh;font-family:"Segoe UI",system-ui,sans-serif;color:var(--texto);overflow-x:hidden}
+    <div class="form-grid">
 
-/* ✅ Fondo más claro y futurista */
-body{
-  background: radial-gradient(circle at 30% 20%, #44c27b, #0d3825 75%);
-  background-attachment: fixed;
-  animation: bgShift 18s ease-in-out infinite alternate;
-}
-@keyframes bgShift {
-  0%{filter:brightness(1) hue-rotate(0deg);}
-  100%{filter:brightness(1.3) hue-rotate(10deg);}
-}
+        <!-- ============================
+             BLOQUE: PRODUCTO
+        ============================ -->
+        <div class="form-box">
+            <h3>Datos del producto</h3>
 
-/* 💊 Pastillas animadas */
-.bg-pastillas{
-  position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
-  background-image:url("data:image/svg+xml,%3Csvg width='180' height='180' viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%2338f19d33'%3E%3Cellipse cx='40' cy='35' rx='12' ry='5' transform='rotate(25 40 35)'/%3E%3Cellipse cx='140' cy='25' rx='10' ry='4' transform='rotate(-20 140 25)'/%3E%3Crect x='72' y='60' width='18' height='6' rx='3' transform='rotate(45 72 60)'/%3E%3Ccircle cx='54' cy='150' r='5'/%3E%3Ccircle cx='160' cy='90' r='4'/%3E%3C/g%3E%3C/svg%3E");
-  background-size:200px 200px;
-  animation:pillsMove 35s linear infinite alternate;
-}
-@keyframes pillsMove{0%{background-position:0 0}100%{background-position:250px 240px}}
+            <label>Nombre</label>
+            <input 
+                type="text" 
+                id="p_nombre" 
+                value="<?= htmlspecialchars($producto['nombre']) ?>" 
+                placeholder="Ej: Ibuprofeno 400mg"
+            >
 
-/* TOPBAR */
-.topbar{display:flex;align-items:center;gap:12px;padding:14px 18px;position:sticky;top:0;z-index:5;}
-.topbar-inner{
-  width:100%;display:flex;align-items:center;gap:14px;
-  background:linear-gradient(180deg,rgba(255,255,255,0.15),rgba(255,255,255,0.07));
-  border:1px solid rgba(255,255,255,.2);
-  border-radius:14px;padding:10px 12px;
-  box-shadow:0 8px 20px rgba(0,0,0,.25);
-  backdrop-filter:blur(12px);
-}
-.back{
-  background:linear-gradient(90deg,var(--verde),var(--verde-neon));
-  color:#fff;border:none;padding:10px 14px;border-radius:12px;cursor:pointer;
-  box-shadow:0 0 20px rgba(56,241,157,.5);
-}
-.back:hover{transform:translateY(-1px) scale(1.02);box-shadow:0 0 26px rgba(56,241,157,.7);}
-.h1{display:flex;align-items:center;gap:10px;font-size:22px;color:#fff;font-weight:700;text-shadow:0 0 10px #38f19d88}
-.h1 i{color:var(--verde-neon);animation:pulse 2.2s ease-in-out infinite}
-.flex-spacer{flex:1}
+            <label>Precio de venta</label>
+            <input 
+                type="number" 
+                id="p_precio" 
+                step="0.01" 
+                value="<?= htmlspecialchars($producto['precio']) ?>" 
+                placeholder="1500"
+            >
 
-/* PANEL */
-.panel{
-  max-width:1100px;margin:22px auto;
-  background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,.1));
-  border:1px solid rgba(255,255,255,.3);
-  border-radius:20px;
-  box-shadow:0 20px 40px rgba(0,0,0,.35);
-  padding:24px;
-  backdrop-filter:blur(16px) saturate(160%);
-  position:relative;overflow:hidden;color:#fff;
-}
-.panel::after{
-  content:"";position:absolute;right:-60px;top:-40px;width:180px;height:180px;
-  border-radius:50%;background:radial-gradient(#38f19d44,transparent 70%);
-  animation:pulseBlob 4s ease-in-out infinite;
-}
-@keyframes pulseBlob{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+            <label>Stock mínimo</label>
+            <input 
+                type="number" 
+                id="p_minimo" 
+                value="<?= (int)$producto['stock_minimo'] ?>" 
+                placeholder="10"
+            >
 
-/* FORMULARIO */
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}
-fieldset{
-  border:1px dashed rgba(255,255,255,.3);padding:18px;border-radius:14px;
-  background:rgba(255,255,255,.05);transition:.25s;
-}
-fieldset:hover{transform:translateY(-2px);box-shadow:0 0 22px rgba(56,241,157,.15)}
-legend{
-  padding:0 10px;font-weight:700;font-size:14px;color:#fff;
-  background:rgba(56,241,157,.2);border-radius:999px;
-  border:1px solid rgba(56,241,157,.4)
-}
-label{display:block;font-size:13px;margin:10px 0 6px;color:#fff;font-weight:600;letter-spacing:.3px;text-transform:uppercase}
-input,select{
-  width:100%;padding:12px 14px;border:1px solid rgba(255,255,255,.3);
-  border-radius:10px;outline:none;font-size:14px;background:rgba(255,255,255,.15);
-  color:#fff;transition:border-color .2s,box-shadow .2s,transform .08s;
-}
-input::placeholder{color:#e5e5e5;}
-input:focus,select:focus{border-color:var(--verde-neon);box-shadow:0 0 0 3px rgba(56,241,157,.3)}
-select{appearance:none;color:#fff;background-image:linear-gradient(45deg,transparent 50%,#fff 50%),linear-gradient(135deg,#fff 50%,transparent 50%);
-  background-position:calc(100% - 18px) calc(1.1em),calc(100% - 13px) calc(1.1em);background-size:5px 5px; background-repeat:no-repeat;
-}
+            <label>Categoría</label>
+            <select id="p_categoria">
+                <option value="">Seleccione...</option>
+                <?php foreach($categorias as $c): ?>
+                    <option 
+                        value="<?= $c['id'] ?>" 
+                        <?= ($producto['categoria_id'] == $c['id']) ? 'selected' : '' ?>
+                    >
+                        <?= htmlspecialchars($c['nombre']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
 
-/* CHECKBOX */
-.check{margin-top:12px;display:flex;align-items:center;gap:8px;font-size:14px}
-.check input[type="checkbox"]{
-  width:18px;height:18px;border-radius:6px;border:1px solid rgba(255,255,255,.4);
-  appearance:none;display:grid;place-items:center;background:rgba(255,255,255,.1);cursor:pointer;transition:.2s;
-}
-.check input[type="checkbox"]:checked{background:var(--verde-neon);border-color:var(--verde-neon)}
-.check label{color:#fff;}
-.check input[type="checkbox"]::after{
-  content:"\f00c";font:normal 12px/1 "Font Awesome 6 Free";font-weight:900;color:#001b10;opacity:0;transform:scale(.6);
-  transition:.15s;
-}
-.check input[type="checkbox"]:checked::after{opacity:1;transform:scale(1)}
+            <label class="check-line">
+                <input 
+                    type="checkbox" 
+                    id="p_receta" 
+                    <?= !empty($producto['requiere_receta']) ? 'checked' : '' ?>
+                > Requiere receta
+            </label>
+        </div>
 
-/* BOTÓN GUARDAR */
-.btn-editar{
-  grid-column:1/-1;margin-top:8px;
-  background:linear-gradient(90deg,var(--verde),var(--verde-neon));
-  color:#fff;border:none;padding:14px 16px;font-size:15px;border-radius:12px;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;gap:10px;
-  box-shadow:0 0 25px rgba(56,241,157,.6);
-  transition:transform .2s,box-shadow .3s;position:relative;overflow:hidden;
-}
-.btn-editar:hover{transform:translateY(-2px);box-shadow:0 0 40px rgba(56,241,157,.8)}
-.btn-editar .shine{
-  content:"";position:absolute;inset:0;background:linear-gradient(120deg,transparent 0%,#ffffff55 30%,transparent 60%);
-  transform:translateX(-120%);transition:transform .6s ease;
-}
-.btn-editar:hover .shine{transform:translateX(120%)}
+        <!-- ============================
+             BLOQUE: LOTE
+        ============================ -->
+        <div class="form-box">
+            <h3>Datos del lote</h3>
 
-/* ALERTAS */
-.alert-success,.alert-error{
-  max-width:1100px;margin:16px auto;padding:14px 16px;border-radius:12px;font-weight:600;
-  display:flex;align-items:center;gap:10px;animation:fadeIn .6s ease;color:#fff;
-}
-.alert-success{background:rgba(56,241,157,.2);border:1px solid rgba(56,241,157,.5);}
-.alert-error{background:rgba(255,80,80,.15);border:1px solid rgba(255,80,80,.4);}
+            <label>Número de lote</label>
+            <input 
+                type="text" 
+                id="l_lote" 
+                value="<?= htmlspecialchars($lote['numero_lote'] ?? '') ?>"
+            >
 
-/* FOOTER */
-.footer{text-align:center;color:#fff;font-size:12px;margin:22px 0;animation:fadeIn 1.1s ease}
+            <label>Fecha de vencimiento</label>
+            <input 
+                type="date" 
+                id="l_vencimiento"
+                value="<?= htmlspecialchars($fechaVal) ?>"
+            >
 
-/* ANIMACIONES */
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-@keyframes fadeInUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
-@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
-</style>
-</head>
-<body>
+            <label>Cantidad actual</label>
+            <input 
+                type="number" 
+                id="l_cantidad" 
+                value="<?= isset($lote['cantidad_actual']) ? (int)$lote['cantidad_actual'] : 0 ?>"
+            >
+        </div>
 
-<div class="bg-pastillas" aria-hidden="true"></div>
+    </div>
 
-<div class="topbar">
-  <div class="topbar-inner">
-    <a href="Stock.php">
-      <button class="back"><i class="fa-solid fa-arrow-left"></i> Volver al Stock</button>
-    </a>
-    <div class="h1"><i class="fa-solid fa-pen-to-square"></i> Editar Producto y Lote</div>
-    <div class="flex-spacer"></div>
-  </div>
+    <button class="btn-save" onclick="guardarEdicionProducto()">
+        <i class="fa-solid fa-floppy-disk"></i> Guardar cambios
+    </button>
 </div>
 
-<?php if (!empty($mensaje)): ?>
-  <div class="<?= $exito ? 'alert-success' : 'alert-error' ?>">
-    <i class="fa-solid <?= $exito ? 'fa-circle-check' : 'fa-circle-exclamation' ?>"></i>
-    <?= htmlspecialchars($mensaje) ?>
-  </div>
-<?php endif; ?>
+<!-- ==========================================================
+     ESTILOS (copiados de stock_agregar)
+========================================================== -->
+<style>
+.form-modal{ padding:20px; }
+.title-modal{ margin-bottom:15px;font-size:20px;font-weight:700;color:#15803d;display:flex;align-items:center;gap:8px;}
+.title-modal i{ color:#16a34a; }
+.form-grid{ display:grid;grid-template-columns:1fr 1fr;gap:18px; }
+.form-box{ background:#f6fef9;border:1px solid #b6eccc;border-radius:10px;padding:18px; }
+.form-box h3{ margin:0 0 10px;font-size:16px;color:#16a34a;display:flex;align-items:center;gap:6px; }
+.form-box h3::before{ content:"";width:6px;height:16px;border-radius:999px;background:#16a34a; }
+.form-box label{ display:block;margin-top:10px;font-size:14px;font-weight:600;color:#14532d; }
+.form-box input,.form-box select{ width:100%;padding:10px;margin-top:5px;border:1px solid #cdcdcd;border-radius:8px;font-size:14px; }
+.check-line{ margin-top:12px;font-size:14px;display:flex;align-items:center;gap:8px; }
+.btn-save{ width:100%;margin-top:20px;padding:12px;background:#16a34a;color:white;font-weight:700;border:none;border-radius:10px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;gap:8px; }
+.btn-save:hover{ filter:brightness(1.08); }
+@media(max-width:900px){ .form-grid{ grid-template-columns:1fr; } }
 
-<form method="POST" class="panel form-grid">
-  <fieldset>
-    <legend>Datos del Producto</legend>
-    <label>Nombre</label>
-    <input type="text" name="nombre" value="<?= htmlspecialchars($producto['nombre']) ?>" required>
-    <label>Precio</label>
-    <input type="number" step="0.01" name="precio" value="<?= htmlspecialchars($producto['precio']) ?>" required>
-    <label>Stock Mínimo</label>
-    <input type="number" name="stock_minimo" value="<?= htmlspecialchars($producto['stock_minimo']) ?>" required>
-    <label>Categoría</label>
-    <select name="categoria_id" required>
-      <?php $categorias->data_seek(0); while ($c = $categorias->fetch_assoc()): ?>
-        <option value="<?= $c['id'] ?>" <?= ($producto['categoria_id'] == $c['id']) ? 'selected' : '' ?>>
-          <?= htmlspecialchars($c['nombre']) ?>
-        </option>
-      <?php endwhile; ?>
-    </select>
-    <div class="check">
-      <input type="checkbox" name="requiere_receta" id="req" <?= $producto['requiere_receta'] ? 'checked' : '' ?>>
-      <label for="req">Requiere receta</label>
-    </div>
-  </fieldset>
+/* Botón volver */
+.btn-back-farvec{
+  background:linear-gradient(90deg,#00794f,#00a86b);
+  color:#fff;
+  padding:8px 14px;
+  border:none;
+  border-radius:10px;
+  font-weight:600;
+  cursor:pointer;
+  margin-bottom:15px;
+}
+.btn-back-farvec:hover{
+  opacity:.9;
+  transform:translateY(-1px);
+}
+</style>
 
-  <fieldset>
-    <legend>Datos del Lote</legend>
-    <label>Número de Lote</label>
-    <input type="text" name="numero_lote" value="<?= htmlspecialchars($lote['numero_lote'] ?? '') ?>" required>
-    <label>Fecha de Vencimiento</label>
-    <input type="date" name="fecha_vencimiento" value="<?= htmlspecialchars($lote['fecha_vencimiento'] ?? '') ?>" required>
-    <label>Cantidad Actual</label>
-    <input type="number" name="cantidad_actual" value="<?= htmlspecialchars($lote['cantidad_actual'] ?? 0) ?>" required>
-  </fieldset>
-
-  <button type="submit" class="btn-editar">
-    <span class="shine"></span>
-    <i class="fa-solid fa-floppy-disk"></i> Guardar Cambios
-  </button>
-</form>
-
-<div class="footer">Farvec • Stock • <?= date('Y') ?></div>
-
+<!-- ==========================================================
+     SCRIPT COMPLETO
+========================================================== -->
 <script>
-document.addEventListener('click', function(e){
-  const btn = e.target.closest('.btn-editar');
-  if(!btn) return;
-  const circle = document.createElement('span');
-  const d = Math.max(btn.clientWidth, btn.clientHeight);
-  circle.style.width = circle.style.height = d + 'px';
-  circle.style.position = 'absolute';
-  circle.style.left = (e.clientX - btn.getBoundingClientRect().left - d/2) + 'px';
-  circle.style.top  = (e.clientY - btn.getBoundingClientRect().top - d/2) + 'px';
-  circle.style.borderRadius = '50%';
-  circle.style.background = 'rgba(255,255,255,.4)';
-  circle.style.transform = 'scale(0)';
-  circle.style.animation = 'ripple .6s ease-out forwards';
-  btn.appendChild(circle);
-  setTimeout(()=>circle.remove(), 650);
+// IDs PHP → JS
+const EDIT_PRODUCTO_ID = <?= (int)$producto_id ?>;
+const EDIT_LOTE_ID     = <?= $lote_id_js ?>;
+
+/* ============================
+   Guardar edición (AJAX)
+============================ */
+function guardarEdicionProducto(){
+
+    const nombre   = document.getElementById("p_nombre").value.trim();
+    const precio   = document.getElementById("p_precio").value;
+    const minimo   = document.getElementById("p_minimo").value;
+    const categoria= document.getElementById("p_categoria").value;
+
+    const lote     = document.getElementById("l_lote").value.trim();
+    const vto      = document.getElementById("l_vencimiento").value;
+    const cant     = document.getElementById("l_cantidad").value;
+
+    if(!nombre)  return alert("⚠ Ingresá el nombre del producto.");
+    if(!precio || precio <= 0) return alert("⚠ Precio inválido.");
+    if(minimo === "" || minimo < 0) return alert("⚠ Stock mínimo inválido.");
+    if(!categoria) return alert("⚠ Seleccioná categoría.");
+    if(!lote) return alert("⚠ Número de lote requerido.");
+    if(!vto)  return alert("⚠ Seleccioná la fecha de vencimiento.");
+    if(cant === "" || cant < 0) return alert("⚠ Cantidad inválida.");
+
+    let data = new FormData();
+    data.append("producto_id", EDIT_PRODUCTO_ID);
+    if (EDIT_LOTE_ID !== null) {
+        data.append("lote_id", EDIT_LOTE_ID);
+    }
+    data.append("nombre", nombre);
+    data.append("precio", precio);
+    data.append("stock_minimo", minimo);
+    data.append("requiere_receta", document.getElementById("p_receta").checked ? 1 : 0);
+    data.append("categoria_id", categoria);
+
+    data.append("numero_lote", lote);
+    data.append("fecha_vencimiento", vto);
+    data.append("cantidad_actual", cant);
+
+    fetch("stock_editar.php", { method:"POST", body:data })
+    .then(r => r.json())
+    .then(res => {
+        if(res.ok){
+            alert("✔ Producto y lote actualizados correctamente.");
+
+            // ✅ Volver al módulo de stock con animación (dashboard)
+            if (typeof cargarModulo === "function") {
+                cargarModulo("stock.php", "Stock y Lotes", {
+                  wrapTitle: false,
+                  reverse: true  // animación de regreso
+                });
+            } else {
+                // ✅ Fallback: si abriste stock_editar.php directo
+                window.location.href = "stock.php";
+            }
+        }else{
+            alert("⚠ " + (res.msg || "Error al guardar los cambios"));
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert("❌ Error inesperado al editar.");
+    });
+}
+
+/* ============================
+   BOTÓN VOLVER
+============================ */
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest("#btnVolverStock");
+  if (!btn) return;
+
+  e.preventDefault();
+
+  if (typeof cargarModulo === "function") {
+    cargarModulo("stock.php", "Stock y Lotes", {
+      wrapTitle: false,
+      reverse: true
+    });
+  } else {
+    window.location.href = "stock.php";
+  }
 });
-(function addRippleCSS(){
-  const css = document.createElement('style');
-  css.textContent = "@keyframes ripple{to{transform:scale(2.8);opacity:0}}";
-  document.head.appendChild(css);
-})();
 </script>
-</body>
-</html>

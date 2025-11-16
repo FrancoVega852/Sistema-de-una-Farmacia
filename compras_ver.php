@@ -26,18 +26,47 @@ $oc = $st->get_result()->fetch_assoc();
 if(!$oc){ header("Location: compras_listar.php"); exit(); }
 
 // Detalle de productos
-$st = $db->prepare("SELECT d.cantidad, d.precio_unitario, d.subtotal,
-                           p.nombre AS producto, p.presentacion, p.precio AS precio_base,
-                           c.nombre AS categoria,
-                           l.numero_lote, l.fecha_vencimiento
-                    FROM DetalleOrdenCompra d
-                    INNER JOIN Producto p ON p.id=d.producto_id
-                    LEFT JOIN Categoria c ON c.id=p.categoria_id
-                    LEFT JOIN Lote l ON l.producto_id=p.id AND l.cantidad_inicial=d.cantidad
-                    WHERE d.orden_id=?");
-$st->bind_param("i",$id); 
+$st = $db->prepare("
+    SELECT 
+        d.cantidad,
+        d.precio_unitario,
+        d.subtotal,
+
+        p.nombre AS producto,
+        p.precio AS precio_base,
+
+        c.nombre AS categoria,
+
+        -- Todas las presentaciones del producto
+        GROUP_CONCAT(pr.nombre SEPARATOR ', ') AS presentaciones,
+
+        l.numero_lote,
+        l.fecha_vencimiento
+
+    FROM DetalleOrdenCompra d
+    INNER JOIN Producto p 
+        ON p.id = d.producto_id
+
+    LEFT JOIN Categoria c 
+        ON c.id = p.categoria_id
+
+    LEFT JOIN PresentacionProducto pp 
+        ON pp.producto_id = p.id
+
+    LEFT JOIN Presentacion pr 
+        ON pr.id = pp.presentacion_id
+
+    LEFT JOIN Lote l 
+        ON l.producto_id = p.id
+
+    WHERE d.orden_id = ?
+
+    GROUP BY d.id
+");
+$st->bind_param("i", $id);
 $st->execute();
 $det = $st->get_result();
+
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -214,7 +243,7 @@ body::after{
       <?php while($d=$det->fetch_assoc()): ?>
         <tr>
           <td><?= htmlspecialchars($d['producto']) ?></td>
-          <td><?= htmlspecialchars($d['presentacion'] ?? '-') ?></td>
+          <td><?= htmlspecialchars($d['presentaciones'] ?? '-') ?></td>
           <td><?= htmlspecialchars($d['categoria'] ?? '-') ?></td>
           <td>$<?= number_format($d['precio_base'],2,',','.') ?></td>
           <td>$<?= number_format($d['precio_unitario'],2,',','.') ?></td>

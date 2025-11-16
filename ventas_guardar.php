@@ -4,7 +4,6 @@ require_once 'Conexion.php';
 require_once 'Venta.php';
 
 if (!isset($_SESSION['usuario_id'])) {
-    // Sin sesión: si es AJAX devuelvo JSON, si no, HTML simple
     $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
               strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 
@@ -34,7 +33,6 @@ function json_response(array $data, int $code = 200){
     exit();
 }
 
-// ¿Es llamada AJAX?
 $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
           strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 
@@ -98,27 +96,44 @@ if (empty($items)) {
    ============================= */
 try {
     $conn       = new Conexion();
-    $ventaModel = new Venta($conn->conexion);
+    $db         = $conn->conexion;
+    $ventaModel = new Venta($db);
 
-    // Usa tu método actual: devuelve ID de la venta
+    // Guardar venta
     $venta_id = $ventaModel->registrarVenta(
         $cliente_id,
         $_SESSION['usuario_id'],
         $items
     );
 
+    // ========================================
+    //  ✔ REGISTRAR INGRESO EN MOVIMIENTO
+    // ========================================
+    $st = $db->prepare("SELECT total FROM Venta WHERE id=? LIMIT 1");
+    $st->bind_param("i", $venta_id);
+    $st->execute();
+    $res = $st->get_result()->fetch_assoc();
+    $totalVenta = (float)($res['total'] ?? 0);
+
+    if ($totalVenta > 0) {
+        $mov = $db->prepare("
+            INSERT INTO Movimiento (tipo, monto, descripcion, origen, ref_id)
+            VALUES ('Ingreso', ?, 'Venta realizada', 'Venta', ?)
+        ");
+        $mov->bind_param("di", $totalVenta, $venta_id);
+        $mov->execute();
+    }
+
     // ==============================
     // RESPUESTA SEGÚN TIPO DE LLAMADA
     // ==============================
-
     if ($isAjax) {
-        // ✅ Modo nuevo: devolver JSON para el modal
         json_response([
             'ok'       => true,
             'venta_id' => (int)$venta_id
         ], 200);
+
     } else {
-        // 🔁 Modo clásico: redirección (por si lo usás desde otro lado)
         header("Location: ventas_listar.php?ok=1&id=" . $venta_id);
         exit();
     }

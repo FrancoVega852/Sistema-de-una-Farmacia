@@ -8,31 +8,15 @@ class Producto {
 
     /**
      * RF01.01 - Obtener productos con categoría y lotes
-     * (Optimizada para FARVEC: productos nuevos primero, lotes ordenados por vencimiento)
      */
     public function obtenerProductosConLotes() {
-        $sql = "
-            SELECT 
-                p.id,
-                p.nombre,
-                p.precio,
-                p.stock_actual,
-                p.stock_minimo,
-                c.nombre AS categoria,
-                l.id AS lote_id,
-                l.numero_lote,
-                l.fecha_vencimiento,
-                l.cantidad_actual
-            FROM Producto p
-            LEFT JOIN Categoria c 
-                ON p.categoria_id = c.id
-            LEFT JOIN Lote l 
-                ON l.producto_id = p.id
-            ORDER BY 
-                p.id DESC,
-                l.fecha_vencimiento ASC,
-                l.id ASC
-        ";
+        $sql = "SELECT p.id, p.nombre, p.precio, p.stock_actual, p.stock_minimo, 
+                       c.nombre AS categoria, 
+                       l.numero_lote, l.fecha_vencimiento, l.cantidad_actual
+                FROM Producto p
+                LEFT JOIN Categoria c ON p.categoria_id = c.id
+                LEFT JOIN Lote l ON p.id = l.producto_id
+                ORDER BY p.id DESC, l.fecha_vencimiento ASC";
         return $this->conn->query($sql);
     }
 
@@ -127,7 +111,6 @@ class Producto {
 
     /**
      * RF01.06 - Insertar historial de movimientos
-     * (usuario_id queda NULL, la columna lo permite)
      */
     public function registrarMovimiento($producto_id, $tipo, $cantidad, $detalle = "") {
         $sql = "INSERT INTO HistorialStock (producto_id, tipo, cantidad, detalle, fecha) 

@@ -569,7 +569,7 @@ body{
   <div class="top-actions">
     <button id="btnMobileMenu" class="btn" title="Menú"><i class="fa-solid fa-bars"></i></button>
     <a href="Menu.php" class="btn" title="Inicio"><i class="fa-solid fa-house"></i></a>
-    <a href="reportes.php" class="btn" title="Reportes"><i class="fa-solid fa-chart-line"></i></a>
+
     <a href="#" id="btnAlerts" class="btn" title="Alertas"><i class="fa-solid fa-bell"></i>
       <span class="badge" style="background:#ffd166;color:#053;border-radius:10px;padding:0 6px;font-weight:900;margin-left:4px;"><?= $alertCount ?></span>
     </a>
@@ -616,7 +616,7 @@ body{
               <a href="stock.php"><i class="fa-solid fa-capsules"></i> Stock y lotes</a>
               <a href="Historial.php"><i class="fa-solid fa-clipboard-list"></i> Historial</a>
               <a href="compras.php"><i class="fa-solid fa-truck"></i> Compras</a>
-              <a href="mapaProveedores.php"><i class="fa-solid fa-building"></i> Proveedores</a>
+              <a href="Proveedores.php"><i class="fa-solid fa-building"></i> Proveedores</a>
             </div>
           </li>
         </ul>
@@ -655,12 +655,44 @@ body{
         </ul>
 
         <!-- HERRAMIENTAS -->
-        <div class="group">Herramientas</div>
-        <ul class="nav">
-          <li><a href="reportes.php"><span class="icon"><i class="fa-solid fa-chart-pie"></i></span><span class="text">Reportes</span></a></li>
-          <li><a href="debug_login.php"><span class="icon"><i class="fa-solid fa-shield-halved"></i></span><span class="text">Seguridad / Sesión</span></a></li>
-          <li><a href="#"><span class="icon"><i class="fa-solid fa-circle-info"></i></span><span class="text">Soporte</span></a></li>
-        </ul>
+<!-- HERRAMIENTAS -->
+<div class="group">Herramientas</div>
+<ul class="nav">
+
+  <li>
+    <a href="reportes.php">
+      <span class="icon"><i class="fa-solid fa-chart-pie"></i></span>
+      <span class="text">Reportes</span>
+    </a>
+  </li>
+
+  <li>
+    <a href="debug_login.php">
+      <span class="icon"><i class="fa-solid fa-shield-halved"></i></span>
+      <span class="text">Seguridad / Sesión</span>
+    </a>
+  </li>
+
+  <!-- AGREGAR AQUÍ -->
+  <?php if (in_array($user['rol'], ['Administrador','Farmaceutico'])): ?>
+  <li>
+    <a href="#" onclick="cargarModulo('finanzas.php','Finanzas',{wrapTitle:true})">
+      <span class="icon"><i class="fa-solid fa-sack-dollar"></i></span>
+      <span class="text">Finanzas</span>
+    </a>
+  </li>
+  <?php endif; ?>
+  <!-- FIN AGREGADO -->
+
+  <li>
+    <a href="#">
+      <span class="icon"><i class="fa-solid fa-circle-info"></i></span>
+      <span class="text">Soporte</span>
+    </a>
+  </li>
+
+</ul>
+
 
         <!-- PANEL DE GESTIÓN (SE MUEVE CON EL MENÚ) -->
         <div class="sidebar-panel-gestion">
@@ -694,6 +726,26 @@ body{
       <div class="kpi"><div class="ico"><i class="fa-solid fa-calendar-check"></i></div><div><small>Ventas del mes</small><h3>$<?= nfmt($kpis['ventas_mes']) ?></h3></div></div>
       <div class="kpi"><div class="ico"><i class="fa-solid fa-pills"></i></div><div><small>Productos</small><h3><?= (int)$kpis['productos'] ?></h3></div></div>
     </section>
+<?php
+$stSal = $conn->conexion->query("
+    SELECT 
+        COALESCE(SUM(CASE WHEN tipo='Ingreso' THEN monto END),0) -
+        COALESCE(SUM(CASE WHEN tipo='Egreso' THEN monto END),0) AS saldo
+    FROM Movimiento
+");
+$saldoActual = 0;
+if ($stSal && $rowSal = $stSal->fetch_assoc()) {
+    $saldoActual = (float)$rowSal['saldo'];
+}
+?>
+
+<div class="kpi">
+  <div class="ico"><i class="fa-solid fa-piggy-bank"></i></div>
+  <div>
+    <small>Saldo actual</small>
+    <h3>$<?= nfmt($saldoActual) ?></h3>
+  </div>
+</div>
 
     <!-- GRÁFICOS -->
     <section class="grid" style="margin-top:12px">
@@ -988,18 +1040,28 @@ function showToast(msg){
    FARVEC PRO – NAVEGACIÓN DINÁMICA DE MÓDULOS (2025)
    ======================================================= */
 
+/* =======================================================
+   FARVEC PRO – NAVEGACIÓN DINÁMICA A → B (2025)
+   Animación direccional inteligente
+   ======================================================= */
+
 const mainContainer = document.querySelector('main.main');
 
 /**
- * Carga un módulo PHP dentro del <main> con animaciones,
- * re-ejecución de scripts y título opcional.
+ * reverse = false  → entra desde la derecha (Stock → Agregar)
+ * reverse = true   → entra desde la izquierda (Agregar → Stock)
  */
 async function cargarModulo(url, title, opts = {}) {
-  const { wrapTitle = true } = opts;
+  const { wrapTitle = true, reverse = false } = opts;
 
-  // Animación de salida
-  mainContainer.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
-  mainContainer.style.transform = 'translateX(-40px)';
+  // Dirección de salida
+  const salida = reverse ? '40px' : '-40px';
+  // Dirección de entrada
+  const entrada = reverse ? '-40px' : '40px';
+
+  // ANIMACIÓN DE SALIDA
+  mainContainer.style.transition = 'transform .25s ease, opacity .25s ease';
+  mainContainer.style.transform = `translateX(${salida})`;
   mainContainer.style.opacity = '0';
 
   setTimeout(async () => {
@@ -1008,47 +1070,48 @@ async function cargarModulo(url, title, opts = {}) {
       if (!res.ok) throw new Error('No se pudo cargar el módulo.');
       const html = await res.text();
 
-      // Contenido
+      // Insertar contenido
       if (wrapTitle) {
         mainContainer.innerHTML = `
-          <section class="module-dynamic fade-in">
+          <section class="module-dynamic">
             <h2 style="color:#00794f;font-weight:800;margin-bottom:12px">${title}</h2>
             ${html}
           </section>
         `;
       } else {
         mainContainer.innerHTML = `
-          <section class="module-dynamic fade-in">
+          <section class="module-dynamic">
             ${html}
           </section>
         `;
       }
 
-      // Re-ejecutar scripts embebidos
+      // Re-ejecutar scripts de la vista cargada
       const scripts = mainContainer.querySelectorAll('script');
       scripts.forEach(old => {
         const s = document.createElement('script');
-        if (old.type) s.type = old.type;
         if (old.src) s.src = old.src;
         else s.textContent = old.textContent;
         old.parentNode.replaceChild(s, old);
       });
 
-      // Inicialización especial del módulo de stock, si existe
+      // Re-init especial del stock si existe
       if (window.initStockYLotes) {
-        try {
-          window.__stockInit = false;
-          window.initStockYLotes();
-        } catch(e) {}
+        window.__stockInit = false;
+        window.initStockYLotes();
       }
 
-      // Animación entrada
-      mainContainer.style.transition = 'transform 0.35s cubic-bezier(.25,.46,.45,.94), opacity 0.35s';
-      mainContainer.style.transform = 'translateX(0)';
-      mainContainer.style.opacity = '1';
+      // ANIMACIÓN DE ENTRADA
+      mainContainer.style.transition = 'transform .35s ease, opacity .35s ease';
+      mainContainer.style.transform = `translateX(${entrada})`;
+
+      setTimeout(() => {
+        mainContainer.style.transform = 'translateX(0)';
+        mainContainer.style.opacity = '1';
+      }, 10);
 
       document.title = "FARVEC • " + title;
-      closeMenu(); // si estuviera abierto en móvil
+      closeMenu();
 
     } catch (err) {
       mainContainer.innerHTML = `
@@ -1056,12 +1119,12 @@ async function cargarModulo(url, title, opts = {}) {
           <h3 style="color:#b93142"><i class="fa-solid fa-triangle-exclamation"></i> Error al cargar el módulo</h3>
           <p>${err.message}</p>
         </div>`;
-      mainContainer.style.transition = 'transform 0.35s ease, opacity 0.35s ease';
       mainContainer.style.transform = 'translateX(0)';
       mainContainer.style.opacity = '1';
     }
   }, 250);
 }
+
 
 /* 1) Interceptar clicks del menú lateral (links .php) */
 document.querySelectorAll('.sidebar a[href$=".php"]').forEach(link => {

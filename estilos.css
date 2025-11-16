@@ -1,0 +1,121 @@
+:root {
+  --verde: #008f4c;
+  --verde-oscuro: #006837;
+  --blanco: #ffffff;
+  --gris: #f4f4f4;
+  --rojo: #e85c4a;
+  --rojo-oscuro: #b91c1c;
+}
+
+/* General */
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background: var(--gris);
+  color: #222;
+  padding: 20px;
+}
+
+/* Botón volver */
+.btn-volver {
+  display: inline-block;
+  background: var(--verde-oscuro);
+  color: var(--blanco);
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-weight: bold;
+  text-decoration: none;
+  transition: 0.3s;
+  margin-bottom: 20px;
+}
+.btn-volver:hover {
+  background: var(--verde);
+  color: var(--blanco);
+  transform: scale(1.05);
+}
+
+/* Títulos */
+h1 {
+  color: var(--verde-oscuro);
+  margin: 10px 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+h1 i { color: var(--verde); }
+
+/* Botón agregar */
+.btn-add {
+  background: var(--rojo);
+  color: var(--blanco);
+  padding: 10px 15px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: bold;
+  margin-bottom: 20px;
+  display: inline-block;
+  transition: 0.3s;
+}
+.btn-add:hover {
+  background: #d94c3c;
+  transform: scale(1.05);
+}
+
+/* Tabla */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--blanco);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+}
+th, td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+th {
+  background: var(--verde-oscuro);
+  color: var(--blanco);
+}
+tr:hover {
+  background: #f9f9f9;
+}
+
+/* Botones acciones */
+.btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  transition: 0.3s;
+}
+
+.btn-historial {
+  background: #f87171;
+  color: var(--blanco);
+}
+.btn-historial:hover { background: #ef4444; }
+
+.btn-editar {
+  background: var(--verde);
+  color: var(--blanco);
+}
+.btn-editar:hover { background: var(--verde-oscuro); }
+
+.btn-eliminar {
+  background: var(--rojo-oscuro);
+  color: var(--blanco);
+}
+.btn-eliminar:hover { background: #ef4444; }
+
+/* Cards */
+.card {
+  background: var(--blanco);
+  padding: 20px;
+  margin: 20px 0;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+}

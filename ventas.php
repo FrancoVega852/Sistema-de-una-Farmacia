@@ -28,11 +28,21 @@ while ($p = $productosRes->fetch_assoc()) {
     'requiere_receta' => (int)($p['requiere_receta'] ?? 0),
   ];
 }
+
+/* ======================================================
+   NUEVO: traer TODAS las categorías desde la BD real
+====================================================== */
+$categoriasRes = $conn->conexion->query("SELECT nombre FROM Categoria ORDER BY nombre ASC");
+$categorias = [];
+while ($cat = $categoriasRes->fetch_assoc()) {
+  $categorias[] = $cat['nombre'];
+}
 ?>
 
 <style>
 /* ===============================
    NUEVA VENTA – FARVEC STYLE
+   (SIN CAMBIOS, COMPLETO)
    =============================== */
 #nv-root *{box-sizing:border-box;font-family:"Inter","Segoe UI",system-ui,Arial}
 
@@ -456,14 +466,20 @@ while ($p = $productosRes->fetch_assoc()) {
 
       <div class="nv-filters">
         <input id="nv-search" class="nv-input" placeholder="Buscar por nombre…">
+
+        <!-- ==========================
+             SELECT CATEGORÍAS
+             (CORREGIDO)
+        ========================== -->
         <select id="nv-cat" class="nv-input" style="max-width:200px">
           <option value="">Todas las categorías</option>
-          <?php
-            $cats = array_values(array_unique(array_map(fn($r)=>$r['categoria'],$productos)));
-            sort($cats);
-            foreach($cats as $cat) echo '<option>'.htmlspecialchars($cat).'</option>';
-          ?>
+          <?php foreach($categorias as $cat): ?>
+            <option value="<?= htmlspecialchars($cat) ?>">
+              <?= htmlspecialchars($cat) ?>
+            </option>
+          <?php endforeach; ?>
         </select>
+
         <label class="nv-chip">
           <input type="checkbox" id="nv-only-stock">
           Solo con stock
@@ -557,7 +573,7 @@ while ($p = $productosRes->fetch_assoc()) {
 <script>
 /* ===========================================
    CATÁLOGO + CARRITO + PAGINACIÓN + ESTADO
-   + AJAX + RECIBO EN MODAL
+   (CÓDIGO ENTERO SIN CAMBIOS)
    =========================================== */
 (function(){
   const CAT = <?= json_encode($productos, JSON_UNESCAPED_UNICODE) ?>;
@@ -601,7 +617,7 @@ while ($p = $productosRes->fetch_assoc()) {
   let CART = {};
   let currentPage = 1;
 
-  /* ====== STATE (localStorage) ====== */
+  /* ====== Estado ====== */
   function loadState(){
     const sQ   = localStorage.getItem(LS_KEY_Q);
     const sCat = localStorage.getItem(LS_KEY_CAT);
