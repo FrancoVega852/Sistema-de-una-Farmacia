@@ -13,7 +13,6 @@ if (!isset($_SESSION['usuario_id'])) {
 $conn = new Conexion();
 $db   = $conn->conexion;
 $db->set_charset("utf8mb4");
-
 ?>
 <style>
 .form-panel{
@@ -106,6 +105,7 @@ document.querySelector("#formMov").addEventListener("submit", async e => {
     e.preventDefault();
     const fd = new FormData(e.target);
 
+    // 🔥 ENVÍA CORRECTAMENTE AL ARCHIVO movimiento_guardar.php
     const res = await fetch("movimiento_guardar.php", {
         method: "POST",
         body: fd
@@ -114,7 +114,8 @@ document.querySelector("#formMov").addEventListener("submit", async e => {
     const json = await res.json();
 
     if (json.ok) {
-        alert("Movimiento registrado");
+        // 🔥 MENSAJE + RECARGA DINÁMICA FARVEC PRO
+        showToast("Movimiento registrado ✔");
         cargarModulo('finanzas.php','Finanzas',{wrapTitle:true});
     } else {
         alert("Error: " + json.msg);

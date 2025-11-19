@@ -33,13 +33,20 @@ class ControladorLogin {
                     case "Administrador":
                         header("Location: menu.php");
                         break;
+
                     case "Farmaceutico":
                     case "Farmacéutico":
                         header("Location: menu_farmaceutico.php");
                         break;
+
+                    case "Cliente":
+                        header("Location: menu_cliente.php");
+                        break;
+
                     case "Empleado":
                         header("Location: menu_empleado.php");
                         break;
+
                     default:
                         header("Location: menu.php");
                         break;
@@ -89,8 +96,8 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  overflow-y: auto; /* ✅ permite desplazamiento si el contenido crece */
-  overflow-x: hidden; /* ✅ evita el desplazamiento lateral */
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* Asegura que los inputs estén por encima de fondos o animaciones */

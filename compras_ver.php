@@ -11,9 +11,16 @@ $conn = new Conexion();
 $db   = $conn->conexion;
 
 $id = (int)($_GET['id'] ?? 0);
-if ($id <= 0) { header("Location: compras_listar.php"); exit(); }
+$modoModulo = isset($_GET['mod']); // ← modo dinámico (dashboard)
 
-// Datos de la orden de compra
+if ($id <= 0) { 
+    if(!$modoModulo) header("Location: compras_listar.php");
+    exit(); 
+}
+
+// ===============================
+// CABECERA DE ORDEN
+// ===============================
 $st = $db->prepare("SELECT oc.id, oc.fecha, oc.total, oc.estado, oc.observaciones,
                            pr.razonSocial AS proveedor, u.nombre AS usuario
                     FROM OrdenCompra oc
@@ -23,44 +30,32 @@ $st = $db->prepare("SELECT oc.id, oc.fecha, oc.total, oc.estado, oc.observacione
 $st->bind_param("i",$id); 
 $st->execute();
 $oc = $st->get_result()->fetch_assoc();
-if(!$oc){ header("Location: compras_listar.php"); exit(); }
+if(!$oc){ 
+    if(!$modoModulo) header("Location: compras_listar.php");
+    exit(); 
+}
 
-// Detalle de productos
+// ===============================
+// DETALLE
+// ===============================
 $st = $db->prepare("
     SELECT 
         d.cantidad,
         d.precio_unitario,
         d.subtotal,
-
         p.nombre AS producto,
         p.precio AS precio_base,
-
         c.nombre AS categoria,
-
-        -- Todas las presentaciones del producto
         GROUP_CONCAT(pr.nombre SEPARATOR ', ') AS presentaciones,
-
         l.numero_lote,
         l.fecha_vencimiento
-
     FROM DetalleOrdenCompra d
-    INNER JOIN Producto p 
-        ON p.id = d.producto_id
-
-    LEFT JOIN Categoria c 
-        ON c.id = p.categoria_id
-
-    LEFT JOIN PresentacionProducto pp 
-        ON pp.producto_id = p.id
-
-    LEFT JOIN Presentacion pr 
-        ON pr.id = pp.presentacion_id
-
-    LEFT JOIN Lote l 
-        ON l.producto_id = p.id
-
+    INNER JOIN Producto p ON p.id = d.producto_id
+    LEFT JOIN Categoria c ON c.id = p.categoria_id
+    LEFT JOIN PresentacionProducto pp ON pp.producto_id = p.id
+    LEFT JOIN Presentacion pr ON pr.id = pp.presentacion_id
+    LEFT JOIN Lote l ON l.producto_id = p.id
     WHERE d.orden_id = ?
-
     GROUP BY d.id
 ");
 $st->bind_param("i", $id);
@@ -68,6 +63,8 @@ $st->execute();
 $det = $st->get_result();
 
 ?>
+
+<?php if(!$modoModulo): ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -76,141 +73,182 @@ $det = $st->get_result();
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<?php endif; ?>
 
 <style>
+/* =====================================================
+   🎨 Colores FARVEC
+   ===================================================== */
 :root{
-  --brand:#0ea5a6;
-  --brand-dark:#0b8384;
-  --bg1:#0f172a;
-  --bg2:#0b1222;
-  --text:#e5e7eb;
-  --muted:#94a3b8;
-  --accent:#38bdf8;
-  --ok:#22c55e;
-  --warn:#fbbf24;
+  --verde:#007C4F;
+  --verde2:#00A86B;
+  --fondo:#ECECEC;
+  --panel:#FFFFFF;
+  --borde:#D2D2D2;
+  --texto:#1a1a1a;
+  --muted:#6b7280;
 }
+
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
   margin:0;
   font-family:'Inter',system-ui,Arial;
-  color:var(--text);
-  background:linear-gradient(180deg,#0b1020 0%,#0f172a 100%);
+  background:var(--fondo);
+  color:var(--texto);
   overflow-x:hidden;
 }
 
-/* Fondo animado */
-body::before,body::after{
-  content:'';position:fixed;inset:auto;z-index:-1;
-  width:480px;height:480px;border-radius:50%;
-  filter:blur(80px);opacity:.35;
-  background:radial-gradient(circle at 40% 40%,#0ea5a666 0%,transparent 70%);
-  animation:float1 25s ease-in-out infinite;
-}
-body::after{
-  right:-120px;bottom:-60px;
-  background:radial-gradient(circle at 60% 60%,#38bdf855 0%,transparent 70%);
-  animation:float2 30s ease-in-out infinite;
-}
-@keyframes float1{0%,100%{transform:translate(0,0)}50%{transform:translate(25px,-20px)}}
-@keyframes float2{0%,100%{transform:translate(0,0)}50%{transform:translate(-25px,20px)}}
-
-/* Header */
+/* =============================================
+   HEADER
+   ============================================= */
 .top{
-  display:flex;align-items:center;gap:14px;
+  display:flex;
+  align-items:center;
+  gap:14px;
   padding:16px 20px;
-  position:sticky;top:0;
-  backdrop-filter:blur(8px);
-  background:linear-gradient(180deg,rgba(11,16,32,.8) 0%,rgba(11,16,32,.4) 100%);
-  border-bottom:1px solid rgba(56,189,248,.15);
-  box-shadow:0 8px 25px rgba(0,0,0,.25);
+  background:var(--panel);
+  border-bottom:1px solid var(--borde);
+  position:sticky;
+  top:0;
+  z-index:5;
 }
+
+/* Botón volver */
 .back{
-  background:linear-gradient(135deg,var(--brand-dark),var(--brand));
-  color:#fff;border:0;border-radius:10px;
-  padding:10px 14px;cursor:pointer;font-weight:600;
-  transition:.25s ease;box-shadow:0 6px 16px rgba(14,165,166,.25);
+  background:var(--verde);
+  color:#fff;
+  border:0;
+  border-radius:8px;
+  padding:10px 14px;
+  cursor:pointer;
+  font-weight:600;
+  transition:.2s ease;
 }
-.back:hover{transform:translateY(-1px);box-shadow:0 10px 25px rgba(14,165,166,.4)}
-.top h1{margin:0;font-size:20px;font-weight:800;display:flex;align-items:center;gap:10px}
-.top h1 i{color:#67e8f9}
+.back:hover{
+  opacity:.9;
+  transform:translateY(-1px);
+}
 
-/* Container */
-.wrap{max-width:1100px;margin:24px auto;padding:0 18px;display:flex;flex-direction:column;gap:20px}
-
-/* Card */
-.card{
-  background:rgba(11,19,36,.6);
-  border:1px solid rgba(56,189,248,.15);
-  border-radius:16px;
-  box-shadow:0 20px 60px rgba(0,0,0,.3);
+/* =============================================
+   TÍTULO
+   ============================================= */
+.mod-title{
+  background:var(--verde);
+  color:white;
   padding:20px;
-  backdrop-filter:blur(10px);
-  animation:fadeUp .6s ease both;
+  border-radius:10px;
+  font-size:22px;
+  font-weight:800;
+  margin:10px 0 20px 0;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  justify-content:center;
+  box-shadow:0 4px 15px rgba(0,0,0,.08);
 }
-.card h3{margin:0 0 14px;font-size:18px;color:#67e8f9}
-.card p{margin:6px 0;font-size:15px;color:#e2e8f0}
+
+/* =============================================
+   CONTENIDO
+   ============================================= */
+.wrap{
+  max-width:1100px;
+  margin:24px auto;
+  padding:0 18px;
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+}
+
+/* =============================================
+   CARDS
+   ============================================= */
+.card{
+  background:var(--panel);
+  border:1px solid var(--borde);
+  border-radius:14px;
+  padding:20px;
+  box-shadow:0 8px 25px rgba(0,0,0,.05);
+  animation:fadeUp .35s ease both;
+}
+.card h3{
+  margin:0 0 14px;
+  color:var(--verde);
+  font-size:18px;
+  font-weight:800;
+}
+.card p{
+  margin:6px 0;
+  font-size:15px;
+}
 
 /* Tabla */
-.table{width:100%;border-collapse:collapse;margin-top:10px}
-.table th,.table td{padding:12px;text-align:left;font-size:14px}
-.table th{
-  background:#031225;color:#67e8f9;
-  text-transform:uppercase;letter-spacing:.3px;
-  font-size:12px;
+.table{
+  width:100%;
+  border-collapse:collapse;
 }
-.table td{border-bottom:1px solid rgba(56,189,248,.1)}
-.table tbody tr{transition:background .2s ease}
-.table tbody tr:hover{background:rgba(14,165,166,.1)}
+.table th{
+  background:#C9F7E5;
+  color:var(--verde);
+  padding:12px;
+  text-align:left;
+}
+.table td{
+  padding:12px;
+  border-bottom:1px solid var(--borde);
+}
 
-/* Total */
-.total{font-size:20px;font-weight:800;text-align:right;margin-top:14px;color:#38bdf8}
+.total{
+  font-size:20px;
+  font-weight:800;
+  color:var(--verde);
+  text-align:right;
+  margin-top:10px;
+}
 
-/* Buttons */
-.actions{display:flex;gap:12px;margin-top:14px}
+.actions{
+  display:flex;
+  gap:12px;
+}
+
 .btn{
-  padding:10px 14px;border-radius:10px;border:0;cursor:pointer;
-  font-weight:600;font-size:14px;transition:.25s ease;
+  padding:10px 14px;
+  border-radius:8px;
+  border:0;
+  cursor:pointer;
+  font-weight:600;
 }
 .btn.print{
-  background:linear-gradient(135deg,#38bdf8,#0ea5a6);
-  color:#002b2f;box-shadow:0 8px 25px rgba(56,189,248,.25);
+  background:var(--verde2);
+  color:#fff;
 }
 .btn.primary{
-  background:linear-gradient(135deg,#22d3ee,#0ea5a6);
-  color:#002c2e;box-shadow:0 8px 25px rgba(34,211,238,.25);
+  background:var(--verde);
+  color:#fff;
 }
-.btn:hover{transform:translateY(-1px);opacity:.95}
 
-/* Animaciones */
-@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeUp{
+  from{opacity:0; transform:translateY(8px)}
+  to{opacity:1; transform:translateY(0)}
+}
 </style>
-</head>
-<div id="toast-ok" style="position:fixed;right:16px;bottom:16px;background:#00a86b;color:#fff;
-  padding:12px 16px;border-radius:12px;font-weight:800;display:none;box-shadow:0 10px 26px rgba(0,0,0,.18)">
-  Compra registrada con éxito
-</div>
-<script>
-  (function(){
-    const ok = new URLSearchParams(location.search).get('ok');
-    if(ok==='1'){
-      const t=document.getElementById('toast-ok');
-      t.style.display='block';
-      setTimeout(()=>t.style.display='none',2000);
-    }
-  })();
-</script>
 
+<?php if(!$modoModulo): ?>
+</head>
 <body>
+<?php endif; ?>
+
+<div id="<?= $modoModulo ? 'mod-compras-ver' : '' ?>">
 
 <div class="top">
-  <a href="compras_listar.php"><button class="back"><i class="fa-solid fa-arrow-left"></i> Volver</button></a>
+  <button class="back btn-volver">
+      <i class="fa-solid fa-arrow-left"></i> Volver
+  </button>
   <h1><i class="fa-solid fa-file-invoice-dollar"></i> Orden de Compra #<?= $oc['id'] ?></h1>
 </div>
 
 <div class="wrap">
 
-  <!-- Datos generales -->
   <div class="card">
     <h3>Información de la Orden</h3>
     <p><strong>Proveedor:</strong> <?= htmlspecialchars($oc['proveedor']) ?></p>
@@ -218,11 +256,10 @@ body::after{
     <p><strong>Fecha:</strong> <?= htmlspecialchars($oc['fecha']) ?></p>
     <p><strong>Estado:</strong> <?= htmlspecialchars($oc['estado']) ?></p>
     <?php if(!empty($oc['observaciones'])): ?>
-      <p><strong>Observaciones:</strong> <?= htmlspecialchars($oc['observaciones']) ?></p>
+    <p><strong>Observaciones:</strong> <?= htmlspecialchars($oc['observaciones']) ?></p>
     <?php endif; ?>
   </div>
 
-  <!-- Detalle -->
   <div class="card">
     <h3>Productos Comprados</h3>
     <table class="table">
@@ -241,29 +278,95 @@ body::after{
       </thead>
       <tbody>
       <?php while($d=$det->fetch_assoc()): ?>
-        <tr>
-          <td><?= htmlspecialchars($d['producto']) ?></td>
-          <td><?= htmlspecialchars($d['presentaciones'] ?? '-') ?></td>
-          <td><?= htmlspecialchars($d['categoria'] ?? '-') ?></td>
-          <td>$<?= number_format($d['precio_base'],2,',','.') ?></td>
-          <td>$<?= number_format($d['precio_unitario'],2,',','.') ?></td>
-          <td><?= (int)$d['cantidad'] ?></td>
-          <td>$<?= number_format($d['subtotal'],2,',','.') ?></td>
-          <td><?= $d['numero_lote'] ? htmlspecialchars($d['numero_lote']) : '-' ?></td>
-          <td><?= $d['fecha_vencimiento'] ? htmlspecialchars($d['fecha_vencimiento']) : '-' ?></td>
-        </tr>
+      <tr>
+        <td><?= htmlspecialchars($d['producto']) ?></td>
+        <td><?= htmlspecialchars($d['presentaciones'] ?? '-') ?></td>
+        <td><?= htmlspecialchars($d['categoria'] ?? '-') ?></td>
+        <td>$<?= number_format($d['precio_base'],2,',','.') ?></td>
+        <td>$<?= number_format($d['precio_unitario'],2,',','.') ?></td>
+        <td><?= (int)$d['cantidad'] ?></td>
+        <td>$<?= number_format($d['subtotal'],2,',','.') ?></td>
+        <td><?= $d['numero_lote'] ?: '-' ?></td>
+        <td><?= $d['fecha_vencimiento'] ?: '-' ?></td>
+      </tr>
       <?php endwhile; ?>
       </tbody>
     </table>
+
     <div class="total">TOTAL: $<?= number_format($oc['total'],2,',','.') ?></div>
   </div>
 
-  <!-- Acciones -->
   <div class="actions">
-    <button class="btn print" onclick="window.print()"><i class="fa-solid fa-print"></i> Imprimir</button>
-    <button class="btn primary" onclick="location.href='compras_listar.php'"><i class="fa-solid fa-list"></i> Ir al listado</button>
+    <button class="btn print"><i class="fa-solid fa-print"></i> Imprimir</button>
+
+    <!-- ➜ BOTÓN CORRECTO PARA VER EL LISTADO -->
+    <button class="btn primary btn-ver-listado">
+        <i class="fa-solid fa-list"></i> Ver el Listado
+    </button>
   </div>
 
 </div>
+</div>
+
+<!-- =====================================================
+     JS: Animaciones + Navegación Dinámica
+===================================================== -->
+<script>
+// =====================================================
+// BOTÓN VOLVER → compras.php
+// =====================================================
+document.querySelectorAll(".btn-volver").forEach(btn=>{
+    btn.onclick = function(e){
+        e.preventDefault();
+
+        const root = document.querySelector("#mod-compras-ver");
+        if(!root){
+            window.location.href = "compras.php";
+            return;
+        }
+
+        root.style.transition = "all .35s ease";
+        root.style.opacity = "0";
+        root.style.transform = "scale(0.94)";
+
+        setTimeout(()=>{
+            if (typeof cargarModulo === "function") {
+                cargarModulo("compras.php","Compras");
+            } else {
+                window.location.href = "compras.php";
+            }
+        },350);
+    }
+});
+
+// =====================================================
+// BOTÓN VER EL LISTADO → compras_listar.php
+// =====================================================
+document.querySelector(".btn-ver-listado")?.addEventListener("click", function(e){
+    e.preventDefault();
+
+    const root = document.querySelector("#mod-compras-ver");
+
+    if (!root){
+        window.location.href = "compras_listar.php";
+        return;
+    }
+
+    root.style.transition = "all .35s ease";
+    root.style.opacity = "0";
+    root.style.transform = "scale(0.94)";
+
+    setTimeout(()=>{
+        if (typeof cargarModulo === "function") {
+            cargarModulo("compras_listar.php?mod=1&from=<?= $oc['id'] ?>","Listado de Compras");
+        } else {
+            window.location.href = "compras_listar.php";
+        }
+    },350);
+});
+</script>
+
+<?php if(!$modoModulo): ?>
 </body>
 </html>
+<?php endif; ?>

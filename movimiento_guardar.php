@@ -17,7 +17,6 @@ if (!isset($_POST['tipo'], $_POST['monto'], $_POST['descripcion'])) {
 $tipo = $_POST['tipo']; // Ingreso | Egreso
 $monto = (float) $_POST['monto'];
 $desc  = trim($_POST['descripcion']);
-$usuario = $_SESSION['usuario_id'];
 
 if ($monto <= 0) {
     echo json_encode(['ok' => false, 'msg' => 'El monto debe ser mayor a cero']);
@@ -27,14 +26,14 @@ if ($monto <= 0) {
 $conn = new Conexion();
 $db = $conn->conexion;
 
-$sql = "INSERT INTO movimientos (tipo, monto, descripcion, fecha, usuario_id)
-        VALUES (?, ?, ?, NOW(), ?)";
+$sql = "INSERT INTO Movimiento (tipo, monto, descripcion, origen, ref_id)
+        VALUES (?, ?, ?, 'Otro', NULL)";
 
 $st = $db->prepare($sql);
-$st->bind_param("sdsi", $tipo, $monto, $desc, $usuario);
+$st->bind_param("sds", $tipo, $monto, $desc);
 
 if ($st->execute()) {
-    echo json_encode(['ok' => true, 'msg' => 'Movimiento registrado']);
+    echo json_encode(['ok' => true]);
 } else {
     echo json_encode(['ok' => false, 'msg' => 'Error al guardar']);
 }

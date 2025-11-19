@@ -10,7 +10,7 @@ if (!isset($_SESSION['usuario_id'])) {
 $conn = new Conexion();
 $db   = $conn->conexion;
 
-// Listado de compras (SIN CAMBIOS EN LA LÓGICA)
+// Listado de compras
 $sql = "SELECT oc.id, oc.fecha, oc.total, oc.estado,
                pr.razonSocial AS proveedor, u.nombre AS usuario
         FROM OrdenCompra oc
@@ -18,6 +18,9 @@ $sql = "SELECT oc.id, oc.fecha, oc.total, oc.estado,
         INNER JOIN Usuario u ON u.id=oc.usuario_id
         ORDER BY oc.fecha DESC";
 $res = $db->query($sql);
+
+// Capturar ID de origen
+$fromID = $_GET['from'] ?? null;
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -64,10 +67,19 @@ body{
 .btn.view{ background:var(--azul); border-color:var(--azul); color:#fff }
 .btn:hover{ transform:translateY(-1px); box-shadow:0 10px 20px rgba(0,0,0,.08) }
 
-/* Contenedor */
 .wrap{ max-width:1200px; margin:22px auto; padding:0 14px; }
 
-/* Tarjeta tabla */
+/* Export buttons */
+.export-bar{
+  display:flex; gap:10px; margin-bottom:15px;
+}
+.export-btn{
+  background:#fff; border:1px solid var(--borde); padding:9px 12px; border-radius:10px;
+  display:flex; align-items:center; gap:6px; cursor:pointer; transition:.2s;
+}
+.export-btn:hover{ transform:translateY(-2px); box-shadow:var(--sombra); }
+
+/* Tabla */
 .card{
   background:var(--card); border:1px solid var(--borde); border-radius:16px;
   box-shadow:var(--sombra); overflow:hidden; animation:fadeIn .5s ease both;
@@ -90,77 +102,204 @@ tbody tr:hover{ transform:scale(1.005); background:#f0fdf4; box-shadow:0 6px 18p
 .pill.pending{ color:#92400e; background:#fff7ed; border-color:#fed7aa }
 .pill.cancel{ color:#991b1b; background:#fee2e2; border-color:#fecaca }
 
-/* Animaciones */
 @keyframes fadeIn{ from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:translateY(0)} }
-.row-anim{ opacity:0; transform:translateY(8px); }
-.row-anim.show{ opacity:1; transform:translateY(0); transition: opacity .45s ease, transform .45s ease }
 
-/* Footer info vacío */
-.empty{ text-align:center; color:var(--muted); padding:24px }
 .currency{ white-space:nowrap }
 </style>
 </head>
 <body>
 
 <div class="top">
-  <a href="Menu.php"><button class="back"><i class="fa-solid fa-arrow-left"></i> Menú</button></a>
+  <button class="back btn-volver">
+      <i class="fa-solid fa-arrow-left"></i> Volver
+  </button>
+
   <h1><i class="fa-solid fa-truck"></i> Listado de Compras</h1>
+
   <div class="topbar-actions">
-    <button class="btn primary" onclick="location.href='compras.php'">
+    <button class="btn primary btn-nueva-compra">
       <i class="fa-solid fa-plus"></i> Nueva Compra
     </button>
   </div>
 </div>
 
+<div id="mod-compras-listar">
+
 <div class="wrap">
+
+  <!-- EXPORT BUTTONS -->
+  <div class="export-bar">
+      <button class="export-btn" id="exportExcel"><i class="fa-solid fa-file-excel"></i> Excel</button>
+      <button class="export-btn" id="exportCSV"><i class="fa-solid fa-file-csv"></i> CSV</button>
+      <button class="export-btn" id="printTable"><i class="fa-solid fa-print"></i> Imprimir</button>
+  </div>
+
   <div class="card">
-    <table class="table" aria-label="Listado de órdenes de compra">
+    <table id="tablaCompras" class="table">
       <thead>
         <tr>
-          <th style="width:80px">ID</th>
+          <th>ID</th>
           <th>Proveedor</th>
           <th>Usuario</th>
           <th>Estado</th>
-          <th style="width:140px">Fecha</th>
-          <th style="width:150px">Total</th>
-          <th style="width:140px">Acciones</th>
+          <th>Fecha</th>
+          <th>Total</th>
+          <th>Acciones</th>
         </tr>
       </thead>
       <tbody>
-        <?php if($res && $res->num_rows): 
-              $i=0;
+        <?php if($res && $res->num_rows):
               while($row=$res->fetch_assoc()):
                 $estado = strtolower($row['estado']);
                 $cls = $estado==='recibida' || $estado==='pagada' ? 'ok' : ($estado==='pendiente' ? 'pending' : 'cancel');
         ?>
-          <tr class="row-anim" style="animation-delay: <?= ($i*40) ?>ms">
+          <tr>
             <td>#<?= $row['id'] ?></td>
             <td><?= htmlspecialchars($row['proveedor']) ?></td>
             <td><?= htmlspecialchars($row['usuario']) ?></td>
-            <td><span class="pill <?= $cls ?>"><i class="fa-solid fa-circle"></i><?= htmlspecialchars($row['estado']) ?></span></td>
+            <td><span class="pill <?= $cls ?>"><?= htmlspecialchars($row['estado']) ?></span></td>
             <td><?= htmlspecialchars($row['fecha']) ?></td>
             <td class="currency">$<?= number_format($row['total'],2,',','.') ?></td>
             <td>
-              <button class="btn view" onclick="location.href='compras_ver.php?id=<?= $row['id'] ?>'">
+              <button class="btn view btn-ver" data-id="<?= $row['id'] ?>">
                 <i class="fa-solid fa-eye"></i> Ver
               </button>
             </td>
           </tr>
-        <?php $i++; endwhile; else: ?>
+        <?php endwhile; else: ?>
           <tr><td colspan="7" class="empty">No hay compras registradas.</td></tr>
         <?php endif; ?>
       </tbody>
     </table>
   </div>
 </div>
+</div>
 
 <script>
-// Entrada suave de filas (IntersectionObserver)
-const rows = document.querySelectorAll('.row-anim');
-const io = new IntersectionObserver((entries) => {
-  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('show'); });
-},{ threshold:.08 });
-rows.forEach(r => io.observe(r));
+// =========================================================
+// BOTÓN VOLVER → vuelve a compras_ver.php?id=[from]
+// =========================================================
+document.querySelector(".btn-volver").addEventListener("click", ()=>{
+
+    let fromID = "<?= $fromID ?>";
+
+    if (!fromID) {
+        alert("No hay una compra previa para volver.");
+        return;
+    }
+
+    const root = document.querySelector("#mod-compras-listar");
+
+    if (root) {
+        root.style.transition = "all .35s ease";
+        root.style.opacity = "0";
+        root.style.transform = "translateX(-20px)";
+    }
+
+    setTimeout(()=>{
+        if (typeof cargarModulo === "function") {
+            cargarModulo(`compras_ver.php?id=${fromID}&mod=1`, "Ver Compra");
+        } else {
+            window.location.href = `compras_ver.php?id=${fromID}`;
+        }
+    },350);
+});
+
+// =========================================================
+// NUEVA COMPRA → compras.php
+// =========================================================
+document.querySelector(".btn-nueva-compra").addEventListener("click", ()=>{
+    const root = document.querySelector("#mod-compras-listar");
+
+    root.style.transition="all .35s ease";
+    root.style.opacity="0";
+    root.style.transform="scale(.94)";
+
+    setTimeout(()=>{
+        if (typeof cargarModulo === "function")
+            cargarModulo("compras.php?mod=1","Nueva Compra");
+        else
+            window.location.href="compras.php";
+    },350);
+});
+
+// =========================================================
+// VER COMPRA → compras_ver.php
+// =========================================================
+document.querySelectorAll(".btn-ver").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+        const id = btn.dataset.id;
+        const root = document.querySelector("#mod-compras-listar");
+
+        root.style.transition="all .35s ease";
+        root.style.opacity="0";
+        root.style.transform="scale(.94)";
+
+        setTimeout(()=>{
+            if (typeof cargarModulo === "function")
+                cargarModulo("compras_ver.php?id="+id+"&mod=1","Ver Compra");
+            else
+                window.location.href="compras_ver.php?id="+id;
+        },350);
+    });
+});
+
+// =========================================================
+// EXPORT CSV
+// =========================================================
+document.getElementById("exportCSV").addEventListener("click", () => {
+    const table = document.querySelector("#tablaCompras");
+    if (!table) return;
+
+    let csv = [];
+    table.querySelectorAll("tr").forEach(row => {
+        let cols = [...row.querySelectorAll("th,td")].map(col => `"${col.innerText}"`);
+        csv.push(cols.join(","));
+    });
+
+    const blob = new Blob([csv.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "compras.csv";
+    link.click();
+});
+
+// =========================================================
+// EXPORT EXCEL
+// =========================================================
+document.getElementById("exportExcel").addEventListener("click", () => {
+    const table = document.querySelector("#tablaCompras");
+    if (!table) return;
+
+    const blob = new Blob([table.outerHTML], { type:"application/vnd.ms-excel" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "compras.xls";
+    link.click();
+});
+
+// =========================================================
+// IMPRIMIR TABLA
+// =========================================================
+document.getElementById("printTable").addEventListener("click", () => {
+    const table = document.querySelector("#tablaCompras").outerHTML;
+
+    const win = window.open("", "", "width=900,height=700");
+    win.document.write(`
+        <html>
+        <head>
+          <title>Imprimir Compras</title>
+          <style>
+            table {width:100%; border-collapse:collapse;}
+            th,td {border:1px solid #555; padding:8px;}
+          </style>
+        </head>
+        <body>${table}</body>
+        </html>
+    `);
+    win.document.close();
+    win.print();
+});
 </script>
 
 </body>

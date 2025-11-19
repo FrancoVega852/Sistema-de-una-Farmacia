@@ -20,7 +20,7 @@ class ControladorRegistro {
             $correo     = trim($_POST['correo']);
             $telefono   = trim($_POST['telefono']);
             $contrasena = $_POST['contrasena'];
-            $rol        = $_POST['rol'];
+            $rol        = $_POST['rol']; // Solo Cliente o Farmacéutico
 
             if ($this->usuario->registrar($nombre, $apellido, $correo, $dni, $domicilio, $telefono, $contrasena, $rol)) {
                 header("Location: login.php?bienvenido=" . urlencode($nombre));
@@ -184,7 +184,7 @@ html, body {
 label {
   font-weight: 500;
   font-size: 0.9rem;
-  color: var(--negro);
+  color: #111827;
 }
 input, select {
   width: 100%;
@@ -302,10 +302,8 @@ button:hover {
         <label for="rol">Rol</label>
         <select name="rol" id="rol" required>
           <option value="">Seleccione un rol</option>
-          <option value="Cliente">Cliente</option>
-          <option value="Empleado">Empleado</option>
+          <option value="Cliente" selected>Cliente</option>
           <option value="Farmacéutico">Farmacéutico</option>
-          <option value="Administrador">Administrador</option>
         </select>
       </div>
       <button type="submit">Registrarse</button>

@@ -28,7 +28,7 @@ if ($desde !== "") {
 }
 if ($hasta !== "") { 
     $where .= " AND fecha <= ? "; 
-    $params[] = $hasta;
+    $params[] = $hasta . " 23:59:59";
     $types   .= "s";
 }
 
@@ -149,6 +149,7 @@ h1{ color:var(--osc); margin-top:0; }
 .filter-box input{
   padding:8px 10px; border-radius:10px; border:1px solid var(--border);
 }
+
 </style>
 </head>
 
@@ -232,6 +233,7 @@ h1{ color:var(--osc); margin-top:0; }
 </div>
 
 <script>
+
 function nuevoMovimiento(){
     cargarModulo('movimiento_nuevo.php','Nuevo movimiento',{wrapTitle:true});
 }
@@ -239,6 +241,7 @@ function nuevoMovimiento(){
 function exportarExcel(){
     window.location.href = "finanzas_excel.php?desde=<?= $desde ?>&hasta=<?= $hasta ?>";
 }
+
 </script>
 
 </body>

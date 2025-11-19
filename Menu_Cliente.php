@@ -1,6 +1,6 @@
 <?php
 /*******************************************************
- * FARVEC • PRO Dashboard (Premium 2025)
+ * FARVEC • Portal Cliente (2025)
  * Menú lateral optimizado + Panel de gestión integrado
  *******************************************************/
 session_start();
@@ -10,7 +10,7 @@ mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 /*==========================
 =   CONTROLADOR (PHP)      =
 ==========================*/
-final class FarvecPro {
+final class FarvecProCliente {
   private mysqli $db;
   public function __construct(mysqli $db) {
     $this->db = $db;
@@ -19,8 +19,9 @@ final class FarvecPro {
   }
 
   public function usuario(): array {
-    $st=$this->db->prepare("SELECT id,nombre,email,rol FROM Usuario WHERE id=? LIMIT 1");
-    $st->bind_param("i", $_SESSION['usuario_id']); $st->execute();
+    $st = $this->db->prepare("SELECT id,nombre,email,rol FROM Usuario WHERE id=? LIMIT 1");
+    $st->bind_param("i", $_SESSION['usuario_id']);
+    $st->execute();
     return $st->get_result()->fetch_assoc() ?: [];
   }
 
@@ -28,13 +29,18 @@ final class FarvecPro {
   =            KPIs              =
   ==============================*/
   public function kpis(): array {
+    // NOTA: Son KPIs globales del sistema, no por cliente,
+    // pero se mantiene el diseño del dashboard.
     $k=['ventas_hoy'=>0.0,'tickets_hoy'=>0,'ventas_mes'=>0.0,'productos'=>0,'clientes'=>0,'proveedores'=>0];
     $r=$this->db->query("SELECT IFNULL(SUM(total),0) m, COUNT(*) c FROM Venta WHERE DATE(fecha)=CURDATE()");
     if($r && $row=$r->fetch_assoc()){ $k['ventas_hoy']=(float)$row['m']; $k['tickets_hoy']=(int)$row['c']; }
     $r=$this->db->query("SELECT IFNULL(SUM(total),0) m FROM Venta WHERE YEAR(fecha)=YEAR(CURDATE()) AND MONTH(fecha)=MONTH(CURDATE())");
     if($r && $row=$r->fetch_assoc()){ $k['ventas_mes']=(float)$row['m']; }
     foreach(['Producto'=>'productos','Cliente'=>'clientes','Proveedor'=>'proveedores'] as $t=>$a){
-      try{$r=$this->db->query("SELECT COUNT(*) c FROM $t"); if($r && $row=$r->fetch_assoc()) $k[$a]=(int)$row['c'];}catch(\Throwable $e){}
+      try{
+        $r=$this->db->query("SELECT COUNT(*) c FROM $t");
+        if($r && $row=$r->fetch_assoc()) $k[$a]=(int)$row['c'];
+      }catch(\Throwable $e){}
     }
     return $k;
   }
@@ -42,6 +48,8 @@ final class FarvecPro {
   /*==============================
   =            ALERTAS           =
   ==============================*/
+  // Para mantener el diseño, dejamos estas funciones,
+  // aunque en un portal real de cliente podrían ocultarse.
   public function stockMinimo(int $limit=12): array {
     try{
       $sql="SELECT id,nombre,stock_actual,stock_minimo
@@ -67,6 +75,7 @@ final class FarvecPro {
   }
 
   public function recetasPendientes(int $limit=12): array {
+    // Si no usás Receta con clientes, esto volverá vacío, pero no rompe el diseño.
     try{
       $r=$this->db->query("SELECT id,paciente AS nombre,medico,estado,fecha
                            FROM Receta
@@ -74,27 +83,6 @@ final class FarvecPro {
                            ORDER BY fecha DESC
                            LIMIT $limit");
       if($r && $r->num_rows>0) return $r->fetch_all(MYSQLI_ASSOC);
-    }catch(\Throwable $e){}
-    try{
-      $r=$this->db->query("SELECT id,cliente_id,fecha
-                           FROM Venta
-                           WHERE tipo='Receta'
-                             AND (estado='Pendiente' OR estado='En revisión')
-                           ORDER BY fecha DESC
-                           LIMIT $limit");
-      if($r && $r->num_rows>0){
-        $o=[];
-        while($x=$r->fetch_assoc()){
-          $o[]=[
-            'id'=>$x['id'],
-            'nombre'=>'Receta #'.$x['id'],
-            'medico'=>'-',
-            'estado'=>'Pendiente',
-            'fecha'=>$x['fecha']
-          ];
-        }
-        return $o;
-      }
     }catch(\Throwable $e){}
     return [];
   }
@@ -126,7 +114,7 @@ final class FarvecPro {
             LEFT JOIN Categoria c ON c.id=p.categoria_id
             GROUP BY cat
             ORDER BY tot DESC";
-      $r=$this->db->query($sql);
+    $r=$this->db->query($sql);
       $L=[]; $D=[];
       if($r){ while($x=$r->fetch_assoc()){ $L[]=$x['cat']; $D[]=(int)$x['tot']; } }
       return ['labels'=>$L,'data'=>$D];
@@ -248,8 +236,15 @@ final class FarvecPro {
 =   BOOTSTRAP DE DATOS     =
 ==========================*/
 $conn = new Conexion();
-$ctl  = new FarvecPro($conn->conexion);
+$ctl  = new FarvecProCliente($conn->conexion);
 $user = $ctl->usuario();
+
+/* Enforce: solo CLIENTE puede entrar acá */
+if (($user['rol'] ?? '') !== 'Cliente') {
+  header('Location: menu.php');
+  exit();
+}
+
 $kpis = $ctl->kpis();
 $serie = $ctl->serieVentas7d();
 $stockCat = $ctl->stockPorCategoria();
@@ -262,13 +257,14 @@ $act  = $ctl->actividad();
 $tasks= $ctl->tareas();
 $notifs=$ctl->notifs();
 $alertCount = count($low)+count($vto)+count($rec);
+
 function nfmt($n,$d=2){ return number_format((float)$n,$d,',','.'); }
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>FARVEC • PRO</title>
+<title>FARVEC • Cliente</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
@@ -568,7 +564,8 @@ body{
 <header class="topbar">
   <div class="top-actions">
     <button id="btnMobileMenu" class="btn" title="Menú"><i class="fa-solid fa-bars"></i></button>
-    <a href="Menu.php" class="btn" title="Inicio"><i class="fa-solid fa-house"></i></a>
+    <!-- IMPORTANTE: Home del cliente apunta a ESTE menú -->
+    <a href="menu_cliente.php" class="btn" title="Inicio"><i class="fa-solid fa-house"></i></a>
 
     <a href="#" id="btnAlerts" class="btn" title="Alertas"><i class="fa-solid fa-bell"></i>
       <span class="badge" style="background:#ffd166;color:#053;border-radius:10px;padding:0 6px;font-weight:900;margin-left:4px;"><?= $alertCount ?></span>
@@ -577,7 +574,7 @@ body{
 
   <div class="brand-plate">
     <img src="Logo.png" alt="FARVEC">
-    <div class="title">FARVEC • Sistema de Gestión Farmacéutica</div>
+    <div class="title">FARVEC • Portal de Cliente</div>
   </div>
 
   <div class="right-actions">
@@ -598,99 +595,46 @@ body{
     <div class="sidebar-inner">
       <div class="sidebar-main">
         <div class="header">
-          <div class="logo"><i class="fa-solid fa-capsules"></i></div>
-          <div class="title">Menú</div>
+          <div class="logo"><i class="fa-solid fa-user"></i></div>
+          <div class="title">Cliente</div>
           <div id="collapse"><i class="fa-solid fa-angles-left"></i></div>
         </div>
 
-        <!-- INVENTARIO -->
-        <div class="group">Inventario</div>
-        <ul class="nav">
-          <li>
-            <a href="#" class="has-sub">
-              <span class="icon"><i class="fa-solid fa-boxes-stacked"></i></span>
-              <span class="text">Gestión de stock</span>
-              <i class="fa-solid fa-chevron-right caret"></i>
-            </a>
-            <div class="submenu">
-              <a href="stock.php"><i class="fa-solid fa-capsules"></i> Stock y lotes</a>
-              <a href="Historial.php"><i class="fa-solid fa-clipboard-list"></i> Historial</a>
-              <a href="compras.php"><i class="fa-solid fa-truck"></i> Compras</a>
-              <a href="Proveedores.php"><i class="fa-solid fa-building"></i> Proveedores</a>
-            </div>
-          </li>
-        </ul>
-
-        <!-- VENTAS -->
-        <div class="group">Ventas</div>
-        <ul class="nav">
-          <li>
-            <a href="#" class="has-sub">
-              <span class="icon"><i class="fa-solid fa-cart-shopping"></i></span>
-              <span class="text">Ventas y clientes</span>
-              <i class="fa-solid fa-chevron-right caret"></i>
-            </a>
-            <div class="submenu">
-              <a href="ventas.php"><i class="fa-solid fa-cash-register"></i> Nueva venta</a>
-              <a href="ventas_listar.php"><i class="fa-solid fa-list"></i> Ventas</a>
-              <a href="clientes_listar.php"><i class="fa-solid fa-users"></i> Clientes</a>
-            </div>
-          </li>
-        </ul>
-
-        <!-- CATÁLOGOS -->
-        <div class="group">Catálogos</div>
-        <ul class="nav">
-          <li>
-            <a href="#" class="has-sub">
-              <span class="icon"><i class="fa-solid fa-folder-tree"></i></span>
-              <span class="text">Administrar catálogos</span>
-              <i class="fa-solid fa-chevron-right caret"></i>
-            </a>
-            <div class="submenu">
-              <a href="clientes_listar.php"><i class="fa-solid fa-user-pen"></i> ABM Clientes</a>
-              <a href="stock.php"><i class="fa-solid fa-pills"></i> ABM Productos</a>
-            </div>
-          </li>
-        </ul>
-
-        <!-- HERRAMIENTAS -->
-<!-- HERRAMIENTAS -->
-<div class="group">Herramientas</div>
+      <!-- COMPRAS (PORTAL CLIENTE) -->
+<div class="group">Compras</div>
 <ul class="nav">
-
   <li>
-    <a href="reportes.php">
-      <span class="icon"><i class="fa-solid fa-chart-pie"></i></span>
-      <span class="text">Reportes</span>
+    <a href="#" class="has-sub">
+      <span class="icon"><i class="fa-solid fa-cart-shopping"></i></span>
+      <span class="text">Compras</span>
+      <i class="fa-solid fa-chevron-right caret"></i>
     </a>
+    <div class="submenu">
+      <!-- Nueva compra (se carga dinámicamente con AJAX) -->
+      <a href="Compra_Cliente_guardar.php">
+        <i class="fa-solid fa-bag-shopping"></i> Nueva compra
+      </a>
+
+      <!-- Historial de compras (del usuario logueado) -->
+      <a href="Compra_Cliente_listar.php">
+        <i class="fa-solid fa-file-invoice"></i> Mis compras
+      </a>
+    </div>
   </li>
-
-  <li>
-    <a href="debug_login.php">
-      <span class="icon"><i class="fa-solid fa-shield-halved"></i></span>
-      <span class="text">Seguridad / Sesión</span>
-    </a>
-  </li>
-
-  <!-- AGREGAR AQUÍ -->
-  <?php if (in_array($user['rol'], ['Administrador','Farmaceutico'])): ?>
-  <li>
-    <a href="#" onclick="cargarModulo('finanzas.php','Finanzas',{wrapTitle:true})">
-      <span class="icon"><i class="fa-solid fa-sack-dollar"></i></span>
-      <span class="text">Finanzas</span>
-    </a>
-  </li>
-  <?php endif; ?>
-  <!-- FIN AGREGADO -->
+</ul>
 
 
+        <!-- HERRAMIENTAS (Sólo soporte visible) -->
+        <div class="group">Herramientas</div>
+        <ul class="nav">
+          <li>
+            
 
         <!-- PANEL DE GESTIÓN (SE MUEVE CON EL MENÚ) -->
         <div class="sidebar-panel-gestion">
           <div class="sidebar-panel-gestion-title">Panel de gestión</div>
           <div class="tabs-header vertical">
-            <button class="tab-btn active" data-tab="finanzas"><i class="fa-solid fa-sack-dollar"></i> Finanzas</button>
+            <button class="tab-btn active" data-tab="finanzas"><i class="fa-solid fa-sack-dollar"></i> Resumen</button>
             <button class="tab-btn" data-tab="top"><i class="fa-solid fa-ranking-star"></i> Top productos</button>
             <button class="tab-btn" data-tab="actividad"><i class="fa-solid fa-user-clock"></i> Actividad</button>
             <button class="tab-btn" data-tab="tareas"><i class="fa-solid fa-list-check"></i> Tareas</button>
@@ -707,7 +651,7 @@ body{
     <section class="tools">
       <div class="search">
         <i class="fa-solid fa-magnifying-glass"></i>
-        <input id="q" placeholder="Buscar productos, clientes o ventas (Ctrl+/)">
+        <input id="q" placeholder="Buscar productos o compras (Ctrl+/)">
       </div>
     </section>
 
@@ -718,6 +662,7 @@ body{
       <div class="kpi"><div class="ico"><i class="fa-solid fa-calendar-check"></i></div><div><small>Ventas del mes</small><h3>$<?= nfmt($kpis['ventas_mes']) ?></h3></div></div>
       <div class="kpi"><div class="ico"><i class="fa-solid fa-pills"></i></div><div><small>Productos</small><h3><?= (int)$kpis['productos'] ?></h3></div></div>
     </section>
+
 <?php
 $stSal = $conn->conexion->query("
     SELECT 
@@ -802,7 +747,7 @@ if ($stSal && $rowSal = $stSal->fetch_assoc()) {
       <h4>Panel de gestión</h4>
       <div class="sub">Información clave en un solo lugar (cambiá de pestaña desde el menú lateral)</div>
 
-      <!-- FINANZAS -->
+      <!-- FINANZAS / RESUMEN -->
       <div class="tab-pane active" id="tab-finanzas">
         <div class="cards3" style="grid-template-columns:repeat(3,1fr)">
           <div class="card">
@@ -874,19 +819,19 @@ if ($stSal && $rowSal = $stSal->fetch_assoc()) {
             <strong>Hora del sistema</strong>
             <div id="clock" style="font-size:20px;margin-top:4px">--:--</div>
           </div>
-          <a class="card" href="clientes_listar.php" style="text-decoration:none;color:inherit">
-            <strong><i class="fa-solid fa-user-plus"></i> Nuevo cliente</strong>
-            <div style="font-size:12px;color:var(--muted);margin-top:4px">Registrar un nuevo cliente frecuente.</div>
+          <a class="card" href="ventas.php" style="text-decoration:none;color:inherit">
+            <strong><i class="fa-solid fa-cart-plus"></i> Hacer una compra</strong>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px">Iniciá un nuevo pedido.</div>
           </a>
-          <a class="card" href="compras.php" style="text-decoration:none;color:inherit">
-            <strong><i class="fa-solid fa-truck"></i> Registrar compra</strong>
-            <div style="font-size:12px;color:var(--muted);margin-top:4px">Actualizar el stock desde proveedores.</div>
+          <a class="card" href="ventas_listar.php" style="text-decoration:none;color:inherit">
+            <strong><i class="fa-solid fa-file-invoice"></i> Ver mis compras</strong>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px">Revisar historial de compras.</div>
           </a>
         </div>
       </div>
     </section>
 
-    <div class="footer">© <?= date('Y') ?> FARVEC · Dashboard</div>
+    <div class="footer">© <?= date('Y') ?> FARVEC · Portal Cliente</div>
   </main>
 </div>
 
@@ -1029,19 +974,14 @@ function showToast(msg){
 }
 
 /* =======================================================
-   FARVEC PRO – NAVEGACIÓN DINÁMICA DE MÓDULOS (2025)
-   ======================================================= */
-
-/* =======================================================
    FARVEC PRO – NAVEGACIÓN DINÁMICA A → B (2025)
-   Animación direccional inteligente
    ======================================================= */
 
 const mainContainer = document.querySelector('main.main');
 
 /**
- * reverse = false  → entra desde la derecha (Stock → Agregar)
- * reverse = true   → entra desde la izquierda (Agregar → Stock)
+ * reverse = false  → entra desde la derecha (A → B)
+ * reverse = true   → entra desde la izquierda (B → A)
  */
 async function cargarModulo(url, title, opts = {}) {
   const { wrapTitle = true, reverse = false } = opts;
@@ -1087,7 +1027,7 @@ async function cargarModulo(url, title, opts = {}) {
         old.parentNode.replaceChild(s, old);
       });
 
-      // Re-init especial del stock si existe
+      // Re-init especial del stock si existe (no aplica mucho a cliente, pero no molesta)
       if (window.initStockYLotes) {
         window.__stockInit = false;
         window.initStockYLotes();
@@ -1117,15 +1057,14 @@ async function cargarModulo(url, title, opts = {}) {
   }, 250);
 }
 
-
 /* 1) Interceptar clicks del menú lateral (links .php) */
 document.querySelectorAll('.sidebar a[href$=".php"]').forEach(link => {
   const url = link.getAttribute('href');
   if (!url) return;
 
-  // No interceptamos logout ni el propio Menu.php
+  // No interceptamos logout ni el propio menú de cliente
   if (/logout\.php/i.test(url)) return;
-  if (/Menu\.php/i.test(url)) return;
+  if (/menu_cliente\.php/i.test(url)) return;
 
   link.addEventListener('click', async e => {
     const isModal = link.hasAttribute('data-modal');

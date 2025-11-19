@@ -1,7 +1,15 @@
 <?php
+session_start();
 require_once 'Conexion.php';
+
+if (!isset($_SESSION['usuario_id'])) {
+  echo "<div class='panel'><h3>Error: sesión expirada.</h3></div>";
+  return;
+}
+
 $conn = new Conexion();
 $db   = $conn->conexion;
+$usuarioId = (int)$_SESSION['usuario_id'];
 
 /* ===================== FILTROS ===================== */
 $qCliente = $_GET['qCliente'] ?? '';
@@ -10,58 +18,109 @@ $qFecha   = $_GET['qFecha'] ?? '';
 $soloHoy  = isset($_GET['soloHoy']) ? 1 : 0;
 
 $where = "1=1";
+$params = [];
+$types  = "";
 
+// Los filtros por cliente/usuario usan JOIN, así que sólo se aplican
+// en las consultas que tienen JOIN (listado, sumas filtradas)
 if ($qCliente !== '') {
-  $q = $db->real_escape_string($qCliente);
-  $where .= " AND (c.nombre LIKE '%$q%' OR u.nombre LIKE '%$q%' OR c.apellido LIKE '%$q%')";
+  $where .= " AND (c.nombre LIKE CONCAT('%', ?, '%')
+               OR  c.apellido LIKE CONCAT('%', ?, '%')
+               OR  u.nombre LIKE CONCAT('%', ?, '%'))";
+  $types  .= "sss";
+  $params[] = $qCliente;
+  $params[] = $qCliente;
+  $params[] = $qCliente;
 }
+
 if ($qEstado !== '') {
-  $e = $db->real_escape_string($qEstado);
-  $where .= " AND v.estado='$e'";
+  $where  .= " AND v.estado = ?";
+  $types  .= "s";
+  $params[] = $qEstado;
 }
+
 if ($qFecha !== '') {
-  $f = $db->real_escape_string($qFecha);
-  $where .= " AND DATE(v.fecha)='$f'";
+  $where  .= " AND DATE(v.fecha) = ?";
+  $types  .= "s";
+  $params[] = $qFecha;
 }
+
 if ($soloHoy) {
-  $where .= " AND DATE(v.fecha)=CURDATE()";
+  $where  .= " AND DATE(v.fecha) = CURDATE()";
 }
 
-$sql = "SELECT v.id, v.fecha, v.total, v.estado,
-               c.nombre AS cliente, u.nombre AS usuario
-        FROM Venta v
-        LEFT JOIN Cliente c ON c.id=v.cliente_id
-        JOIN Usuario u ON u.id=v.usuario_id
-        WHERE $where
-        ORDER BY v.fecha DESC";
+// SIEMPRE filtrar por el usuario (cliente) logueado
+$where  .= " AND v.usuario_id = ?";
+$types  .= "i";
+$params[] = $usuarioId;
 
-$ventas = $db->query($sql);
+// Base FROM para reutilizar en KPIs
+$sqlBase = "
+  FROM Venta v
+  LEFT JOIN Cliente c ON c.id = v.cliente_id
+  INNER JOIN Usuario u ON u.id = v.usuario_id
+";
+
+/* ===================== LISTADO ===================== */
+$sql = "
+  SELECT v.id, v.fecha, v.total, v.estado,
+         c.nombre AS cliente, u.nombre AS usuario
+  $sqlBase
+  WHERE $where
+  ORDER BY v.fecha DESC
+";
+$st = $db->prepare($sql);
+if ($types !== "") {
+  $st->bind_param($types, ...$params);
+}
+$st->execute();
+$ventas = $st->get_result();
 
 /* ===================== KPIs ===================== */
 $totalVentas = $ventas->num_rows;
-$r = $db->query("SELECT IFNULL(SUM(total),0) AS s FROM Venta WHERE $where");
-$importeFiltro = (float)($r->fetch_assoc()['s'] ?? 0);
 
-$ticketProm = ($totalVentas>0)
-              ? ($importeFiltro / $totalVentas)
-              : 0;
+// Importe total (con el mismo filtro)
+$sqlImp = "
+  SELECT IFNULL(SUM(v.total),0) AS s
+  $sqlBase
+  WHERE $where
+";
+$stImp = $db->prepare($sqlImp);
+if ($types !== "") {
+  $stImp->bind_param($types, ...$params);
+}
+$stImp->execute();
+$importeFiltro = (float)($stImp->get_result()->fetch_assoc()['s'] ?? 0);
 
-$r = $db->query("SELECT IFNULL(SUM(total),0) AS s FROM Venta WHERE DATE(fecha)=CURDATE()");
-$ventasHoy = (float)($r->fetch_assoc()['s'] ?? 0);
+// Ticket promedio
+$ticketProm = ($totalVentas > 0)
+  ? ($importeFiltro / $totalVentas)
+  : 0;
+
+// Ventas de HOY del mismo usuario
+$sqlHoy = "
+  SELECT IFNULL(SUM(v.total),0) AS s
+  $sqlBase
+  WHERE DATE(v.fecha) = CURDATE()
+    AND v.usuario_id = ?
+";
+$stHoy = $db->prepare($sqlHoy);
+$stHoy->bind_param("i", $usuarioId);
+$stHoy->execute();
+$ventasHoy = (float)($stHoy->get_result()->fetch_assoc()['s'] ?? 0);
 ?>
 
 <!-- BOTÓN VOLVER + TÍTULO (DINÁMICO) -->
-<div style="display:flex;align-items:center;gap:14px;margin-bottom:15px">
+<div style="display:flex;align-items:center;gap:14px;margin-bottom:15px;flex-wrap:wrap">
 
-<button onclick="window.location.href='menu.php'"
-        style="background:#00794f;color:#fff;border:0;border-radius:10px;
-               padding:10px 16px;cursor:pointer;font-weight:700;">
-    <i class="fa-solid fa-arrow-left"></i> Volver al menú
-</button>
-
+  <button onclick="window.location.href='menu_cliente.php'"
+          style="background:#00794f;color:#fff;border:0;border-radius:10px;
+                 padding:10px 16px;cursor:pointer;font-weight:700;">
+      <i class="fa-solid fa-arrow-left"></i> Volver al Portal
+  </button>
 
   <h1 style="margin:0;font-size:22px;font-weight:800;color:#0b1320">
-    Listado de Ventas
+    Mis Compras
   </h1>
 
 </div>
@@ -70,7 +129,7 @@ $ventasHoy = (float)($r->fetch_assoc()['s'] ?? 0);
 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;">
 
   <div style="background:#25c45e;padding:18px;border-radius:16px;color:white;box-shadow:0 8px 18px rgba(0,0,0,.12);">
-    <strong>Ventas (filtro)</strong>
+    <strong>Compras (filtro)</strong>
     <div style="font-size:26px;font-weight:700;margin-top:6px"><?= $totalVentas ?></div>
   </div>
 
@@ -85,19 +144,19 @@ $ventasHoy = (float)($r->fetch_assoc()['s'] ?? 0);
   </div>
 
   <div style="background:#e63946;padding:18px;border-radius:16px;color:white;box-shadow:0 8px 18px rgba(0,0,0,.12);">
-    <strong>Hoy</strong>
+    <strong>Compras de hoy</strong>
     <div style="font-size:26px;font-weight:700;margin-top:6px">$<?= number_format($ventasHoy,2,',','.') ?></div>
   </div>
 
 </div>
 
-<!-- BOTÓN REGISTRAR -->
+<!-- BOTÓN NUEVA COMPRA -->
 <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-  <button class="btn-module" data-href="ventas.php"
+  <button class="btn-module" data-href="Compra_Cliente_guardar.php"
           style="display:inline-flex;align-items:center;gap:8px;background:#28a745;
                  color:white;border:0;padding:12px 18px;border-radius:12px;font-size:14px;
                  font-weight:700;cursor:pointer;box-shadow:0 8px 20px rgba(0,0,0,.15);">
-      <i class="fa-solid fa-plus"></i> Registrar Venta
+      <i class="fa-solid fa-plus"></i> Nueva compra
   </button>
 </div>
 
@@ -105,12 +164,12 @@ $ventasHoy = (float)($r->fetch_assoc()['s'] ?? 0);
 <div style="background:white;border-radius:14px;padding:15px;
             box-shadow:0 8px 20px rgba(0,0,0,.12);margin-bottom:15px;">
 
-  <form onsubmit="aplicarFiltro(event)"
+  <form onsubmit="aplicarFiltroCompra(event)"
         style="display:flex;gap:10px;flex-wrap:wrap">
 
     <input id="qCliente" name="qCliente"
       value="<?= htmlspecialchars($qCliente) ?>"
-      placeholder="Buscar cliente / usuario"
+      placeholder="Buscar por cliente / usuario"
       style="padding:10px 12px;border-radius:8px;border:1px solid #ccc;flex:1">
 
     <select id="qEstado" name="qEstado"
@@ -136,7 +195,7 @@ $ventasHoy = (float)($r->fetch_assoc()['s'] ?? 0);
     </button>
 
     <button type="button"
-            onclick="cargarModulo('ventas_listar.php')"
+            onclick="cargarModulo('Compra_Cliente_listar.php')"
             style="background:#f6b100;color:white;border:0;padding:10px 16px;
                    border-radius:10px;font-weight:600;cursor:pointer;">
       <i class="fa-solid fa-rotate-right"></i> Limpiar
@@ -180,22 +239,21 @@ $estadoColor = $v['estado']==='Pagada'
 
     <!-- VER -->
     <button class="btn-module"
-            data-href="venta_ver.php?id=<?= $v['id'] ?>"
+            data-href="Compra_Cliente_ver.php?id=<?= $v['id'] ?>"
             style="background:#0aa06e;color:white;padding:6px 10px;border-radius:8px;
                    font-size:13px;font-weight:600;margin-right:4px;border:0;cursor:pointer;">
       Ver
     </button>
 
     <!-- IMPRIMIR -->
-    <button class="btn-module"
-            data-href="venta_imprimir.php?id=<?= $v['id'] ?>"
+    <button onclick="window.open('venta_imprimir.php?id=<?= $v['id'] ?>','_blank')"
             style="background:#1662c2;color:white;padding:6px 10px;border-radius:8px;
                    font-size:13px;font-weight:600;margin-right:4px;border:0;cursor:pointer;">
       Imp
     </button>
 
     <!-- ANULAR -->
-    <button onclick="anularVenta(<?= $v['id'] ?>)"
+    <button onclick="anularCompraCliente(<?= $v['id'] ?>)"
             style="background:#d62828;color:white;padding:6px 10px;border-radius:8px;
                    font-size:13px;font-weight:600;border:0;cursor:pointer;">
       Anular
@@ -213,13 +271,12 @@ $estadoColor = $v['estado']==='Pagada'
 
 <!-- SCRIPT DINÁMICO -->
 <script>
-
 document.querySelectorAll(".btn-module").forEach(btn => {
   btn.onclick = () => cargarModulo(btn.dataset.href);
 });
 
 /* Aplicar filtro sin recargar */
-function aplicarFiltro(e){
+function aplicarFiltroCompra(e){
   e.preventDefault();
 
   const params = new URLSearchParams();
@@ -231,13 +288,17 @@ function aplicarFiltro(e){
     params.append("soloHoy", "1");
   }
 
-  cargarModulo("ventas_listar.php?" + params.toString());
+  cargarModulo("Compra_Cliente_listar.php?" + params.toString());
 }
 
-function anularVenta(id){
-  if(!confirm("¿Seguro que deseas ANULAR esta venta?")) return;
+/* Anular compra (venta) del cliente vía AJAX */
+function anularCompraCliente(id){
+  if(!confirm("¿Seguro que deseas ANULAR esta compra?")) return;
 
-  fetch("venta_anular.php?id="+id)
-    .then(()=> cargarModulo("ventas_listar.php"));
+  fetch("Compra_Cliente_anular.php?id=" + id, {
+    headers: { "X-Requested-With": "XMLHttpRequest" }
+  })
+    .then(() => cargarModulo("Compra_Cliente_listar.php"))
+    .catch(() => alert("Error al anular la compra"));
 }
 </script>

@@ -14,78 +14,22 @@ $db   = $conn->conexion;
 $productoModel = new Producto($db);
 
 /* ============================
-   PRODUCTOS + LOTES (KPIs)
+   KPIs DE COMPRAS (REEMPLAZA A LOS DE PRODUCTOS)
 ============================ */
-$res = $productoModel->obtenerProductosConLotes();
+$sqlKpi = "
+    SELECT 
+        COUNT(*) AS total,
+        SUM(estado = 'pendiente') AS pendientes,
+        SUM(estado = 'recibida') + SUM(estado = 'pagada') AS recibidas,
+        SUM(estado = 'cancelada') AS canceladas
+    FROM OrdenCompra
+";
+$resKpi = $db->query($sqlKpi)->fetch_assoc();
 
-$productos   = [];
-$kpi_total   = 0;
-$kpi_bajo    = 0;
-$kpi_vto30   = 0;
-$kpi_venc    = 0;
-$today       = new DateTime('today');
-
-if ($res && $res instanceof mysqli_result) {
-    while ($row = $res->fetch_assoc()) {
-        $pid = (int)$row['id'];
-
-        if (!isset($productos[$pid])) {
-            $productos[$pid] = [
-                'id'           => $pid,
-                'nombre'       => $row['nombre'],
-                'precio'       => (float)$row['precio'],
-                'stock_actual' => (int)$row['stock_actual'],
-                'stock_minimo' => (int)$row['stock_minimo'],
-                'categoria'    => $row['categoria'] ?? null,
-                'lotes'        => []
-            ];
-        }
-        if (!empty($row['numero_lote'])) {
-            $productos[$pid]['lotes'][] = [
-                'numero_lote'       => $row['numero_lote'],
-                'fecha_vencimiento' => $row['fecha_vencimiento'],
-                'cantidad_actual'   => (int)$row['cantidad_actual']
-            ];
-        }
-    }
-}
-
-foreach ($productos as &$p) {
-    $kpi_total++;
-
-    if ($p['stock_actual'] <= $p['stock_minimo']) {
-        $p['estado_stock'] = 'bajo';
-        $kpi_bajo++;
-    } else {
-        $p['estado_stock'] = 'ok';
-    }
-
-    $p['lote_proximo'] = null;
-    $p['estado_vto']   = 'sin-lote';
-
-    if (!empty($p['lotes'])) {
-        usort($p['lotes'], fn($a, $b) => strcmp($a['fecha_vencimiento'], $b['fecha_vencimiento']));
-        $first              = $p['lotes'][0];
-        $p['lote_proximo']  = $first;
-        $vto = DateTime::createFromFormat('Y-m-d', $first['fecha_vencimiento']);
-
-        if ($vto) {
-            if ($vto < $today) {
-                $p['estado_vto'] = 'vencido';
-                $kpi_venc++;
-            } else {
-                $diff = (int)$today->diff($vto)->format('%a');
-                if ($diff <= 90) {
-                    $p['estado_vto'] = 'por-vencer';
-                    $kpi_vto30++;
-                } else {
-                    $p['estado_vto'] = 'ok';
-                }
-            }
-        }
-    }
-}
-unset($p);
+$kpi_total  = (int)$resKpi['total'];
+$kpi_pend   = (int)$resKpi['pendientes'];
+$kpi_recib  = (int)$resKpi['recibidas'];
+$kpi_cancel = (int)$resKpi['canceladas'];
 
 /* ============================
    LISTADO DE COMPRAS
@@ -150,7 +94,14 @@ main{
 .btn-back:hover{opacity:.9;transform:translateY(-1px);}
 
 /* ====== KPIs ====== */
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin-bottom:1.5rem;}
+/* Forzar que el contenedor de KPIs no herede display:flex */
+.kpis {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
 .kpi{display:flex;align-items:center;justify-content:space-between;border-radius:1rem;padding:1rem 1.2rem;color:#fff;
   box-shadow:0 6px 20px rgba(0,0,0,.1);}
 .kpi i{font-size:1.6rem;}
@@ -280,35 +231,42 @@ tbody tr:hover{background:#ecfdf5;}
 
   <!-- KPIs DE STOCK (SE MANTIENEN) -->
   <div class="kpis">
-    <div class="kpi prod">
-      <i class="fa-solid fa-pills"></i>
-      <div class="info">
-        <div>Productos</div>
-        <div class="n"><?= $kpi_total ?></div>
-      </div>
-    </div>
-    <div class="kpi low">
-      <i class="fa-solid fa-triangle-exclamation"></i>
-      <div class="info">
-        <div>Stock bajo</div>
-        <div class="n"><?= $kpi_bajo ?></div>
-      </div>
-    </div>
-    <div class="kpi vto">
-      <i class="fa-solid fa-hourglass-half"></i>
-      <div class="info">
-        <div>Por vencer ≤ 90 días</div>
-        <div class="n"><?= $kpi_vto30 ?></div>
-      </div>
-    </div>
-    <div class="kpi exp">
-      <i class="fa-solid fa-skull-crossbones"></i>
-      <div class="info">
-        <div>Vencidos</div>
-        <div class="n"><?= $kpi_venc ?></div>
-      </div>
+
+  <div class="kpi prod">
+    <i class="fa-solid fa-clipboard-list"></i>
+    <div class="info">
+      <div>Total de compras</div>
+      <div class="n"><?= $kpi_total ?></div>
     </div>
   </div>
+
+  <div class="kpi low">
+    <i class="fa-solid fa-clock"></i>
+    <div class="info">
+      <div>En espera (Pendientes)</div>
+      <div class="n"><?= $kpi_pend ?></div>
+    </div>
+  </div>
+
+  <div class="kpi vto">
+    <i class="fa-solid fa-circle-check"></i>
+    <div class="info">
+      <div>Recibidas / Pagadas</div>
+      <div class="n"><?= $kpi_recib ?></div>
+    </div>
+  </div>
+
+  <div class="kpi exp">
+    <i class="fa-solid fa-ban"></i>
+    <div class="info">
+      <div>Canceladas</div>
+      <div class="n"><?= $kpi_cancel ?></div>
+    </div>
+  </div>
+
+</div>
+
+
 
   <!-- TOOLBAR AHORA SOLO BUSCA Y ACCIONES -->
   <div class="toolbar">

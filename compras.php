@@ -610,6 +610,50 @@ $mapaProveedores = file_exists('mapaProveedores.php')
       showToast('ok','Compra registrada con éxito');
     }
 
+      // ============================================
+  //   OVERRIDE: REGISTRAR COMPRA CON ANIMACIÓN
+  // ============================================
+  form.addEventListener("submit", function(e){
+      e.preventDefault();  // cancelamos el envío normal
+
+      const fd = new FormData(form);
+      fd.append("ajax","1");
+
+      fetch("compras_guardar.php", {
+          method: "POST",
+          body: fd
+      })
+      .then(r => r.json())
+      .then(data => {
+          if (!data.ok){
+              showToast("err","No se pudo registrar la compra");
+              return;
+          }
+
+          // 1) Animación de salida
+          const root = document.querySelector("#m-compras");
+          root.style.transition = "all .35s ease";
+          root.style.opacity = "0";
+          root.style.transform = "scale(0.94)";
+
+          // 2) Cargar compras_ver dentro del dashboard
+          setTimeout(()=>{
+              if (typeof cargarModulo === "function") {
+                  cargarModulo("compras_ver.php?id="+data.id+"&mod=1",
+                               "Compra Registrada");
+              } else {
+                  window.location.href = "compras_ver.php?id="+data.id;
+              }
+          }, 350);
+      })
+      .catch(()=>{
+          showToast("err","Error inesperado");
+      });
+  });
+
+
   })();
+
+  
   </script>
 </div>

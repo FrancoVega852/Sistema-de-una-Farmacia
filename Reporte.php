@@ -70,6 +70,6 @@ public function productosProximosAVencer(int $dias = 30): mysqli_result {
     $stmt->bind_param('i', $dias);
     $stmt->execute();
     return $stmt->get_result();
-}
+    }
 
 ?>
