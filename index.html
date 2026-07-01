@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BALKFOX - Home Banking</title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+
+  <style>
+    :root{
+      /* Paleta BALKFOX */
+      --primario:#1d64f2;
+      --primario-oscuro:#1548b2;
+      --primario-soft:#eaf1ff;
+      --bg:#f6f8fc;
+      --texto:#0f172a;
+      --muted:#55627a;
+
+      /* Bootstrap overrides */
+      --bs-primary: var(--primario);
+      --bs-primary-rgb: 29,100,242;
+    }
+
+    body{
+      background: var(--bg);
+      color: var(--texto);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    /* Barra seguridad: menos oscura, más “corporativa” */
+    .security-bar{
+      background: linear-gradient(90deg, rgba(15,23,42,.92), rgba(29,100,242,.70));
+      color: rgba(255,255,255,.92);
+      font-size: .85rem;
+    }
+
+    /* Hero más claro (subimos brightness y bajamos opacidad del negro) */
+    .hero{
+      position: relative;
+      overflow: hidden;
+      border-bottom: 1px solid rgba(29,100,242,.15);
+    }
+    .hero::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(120deg, rgba(15,23,42,.55), rgba(29,100,242,.55)),
+        url("https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1600&q=70") center/cover no-repeat;
+      filter: brightness(1.08) saturate(1.05);
+      transform: scale(1.02);
+    }
+    .hero > .container{
+      position: relative;
+      z-index: 1;
+    }
+
+    .brand-badge{
+      display:inline-flex;
+      align-items:center;
+      gap:.6rem;
+      font-weight:800;
+      letter-spacing:.14em;
+    }
+    .brand-logo{
+      width:42px;height:42px;
+      border-radius:12px;
+      display:grid;
+      place-items:center;
+      background: radial-gradient(circle at 20% 0, #7aa7ff, #1d64f2 55%, #0b1224 100%);
+      border: 1px solid rgba(255,255,255,.25);
+      box-shadow: 0 10px 22px rgba(0,0,0,.18);
+      overflow:hidden;
+    }
+    .brand-logo img{ width:100%; height:100%; object-fit:cover; }
+
+    .soft-card{
+      background: rgba(255,255,255,.94);
+      border: 1px solid rgba(29,100,242,.15);
+      box-shadow: 0 14px 30px rgba(15,23,42,.10);
+      backdrop-filter: blur(10px);
+    }
+
+    .pill-btn{
+      border-radius: 999px;
+      padding: .65rem 1.2rem;
+      font-weight: 700;
+    }
+
+    /* Reveal (suave) */
+    .reveal{
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity .55s ease, transform .55s ease;
+    }
+    .reveal.visible{
+      opacity:1;
+      transform: translateY(0);
+    }
+
+    /* Avatar */
+    .avatar{
+      width:56px; height:56px;
+      border-radius: 50%;
+      border: 3px solid rgba(29,100,242,.22);
+      background: #fff;
+      object-fit: cover;
+    }
+
+    footer{
+      background: #ffffff;
+      border-top: 1px solid rgba(29,100,242,.15);
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Barra de seguridad -->
+  <div class="security-bar py-2">
+    <div class="container d-flex align-items-center gap-2">
+      <span class="fw-bold" style="color:#22c55e">🔒</span>
+      <span>Conexión segura mediante cifrado TLS 1.3 · Nunca compartas tus claves ni códigos de operación.</span>
+    </div>
+  </div>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg bg-white sticky-top border-bottom" style="border-color: rgba(29,100,242,.15) !important;">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center gap-2" href="#">
+        <span class="brand-logo">
+          <img src="logo.png" alt="BALKFOX Logo">
+        </span>
+        <span class="brand-badge text-dark">BALKFOX</span>
+      </a>
+
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbalkfox">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbalkfox">
+        <ul class="navbar-nav ms-auto me-3">
+          <li class="nav-item"><a class="nav-link fw-semibold" href="#operaciones">PERSONAS</a></li>
+          <li class="nav-item"><a class="nav-link fw-semibold" href="#seguridad">SEGURIDAD</a></li>
+          <li class="nav-item"><a class="nav-link fw-semibold" href="#ayuda">AYUDA</a></li>
+        </ul>
+
+        <div class="d-flex gap-2">
+          <a href="login.php" class="btn btn-primary pill-btn">Iniciar sesión</a>
+          <a href="registro.php" class="btn btn-outline-primary pill-btn">Registrarme</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <header class="hero">
+    <div class="container py-5 py-lg-6">
+      <div class="row g-4 align-items-center">
+        <div class="col-lg-7 reveal">
+  <div class="text-uppercase fw-semibold"
+       style="letter-spacing:.10em; color:#ffffff; font-size:.86rem;">
+    PERSONAS · CANALES DIGITALES
+  </div>
+
+  <h1 class="display-5 fw-bold text-white mt-2">Home Banking</h1>
+
+  <p class="lead mb-4"
+     style="max-width:58ch; color:#ffffff;">
+    La manera más ágil y simple de consultar tus cuentas, realizar pagos, transferencias
+    y administrar todos tus productos financieros en BALKFOX.
+  </p>
+
+  <div class="d-flex flex-wrap gap-2">
+    <a href="login.php" class="btn btn-light pill-btn text-primary">Inicio de Sesión</a>
+    <a href="registro.php" class="btn btn-outline-light pill-btn">Registrar Nuevo Usuario</a>
+  </div>
+</div>
+
+
+        <div class="col-lg-5 reveal">
+          <div class="p-4 rounded-4 soft-card">
+            <span class="badge rounded-pill text-bg-success bg-opacity-10 text-success-emphasis mb-2">
+              🔐 Sitio protegido · Cifrado 256 bits
+            </span>
+            <h5 class="fw-bold mb-2">Seguridad en cada operación</h5>
+            <ul class="mb-0 text-secondary">
+              <li>Validación de identidad por credenciales y datos personales.</li>
+              <li>Registro de cada acceso y dispositivo utilizado.</li>
+              <li>Alertas por movimientos inusuales y operaciones relevantes.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Franja -->
+  <section class="bg-primary text-white py-4">
+    <div class="container">
+      <div class="row g-3 align-items-center">
+        <div class="col-lg-4">
+          <div class="h5 mb-0 fw-semibold">Ganá tiempo con Home Banking</div>
+        </div>
+        <div class="col-lg-8">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <div class="fw-bold">Todos los días</div>
+              <div class="text-white-75">Operá cuando lo necesites, sin ir a la sucursal.</div>
+            </div>
+            <div class="col-md-4">
+              <div class="fw-bold">Durante las 24 hs.</div>
+              <div class="text-white-75">Consultas y operaciones disponibles en cualquier horario.</div>
+            </div>
+            <div class="col-md-4">
+              <div class="fw-bold">Desde donde elijas</div>
+              <div class="text-white-75">Accedé desde computadora, notebook, tablet o celular.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contenido -->
+  <main class="container py-5">
+
+    <!-- Operaciones -->
+    <h2 class="text-center fw-bold mb-4 reveal" id="operaciones">Operaciones Disponibles</h2>
+
+    <div class="accordion shadow-sm reveal" id="accOperaciones">
+      <div class="accordion-item">
+        <h2 class="accordion-header">
+          <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#op1" aria-expanded="true">
+            Consultas
+          </button>
+        </h2>
+        <div id="op1" class="accordion-collapse collapse show" data-bs-parent="#accOperaciones">
+          <div class="accordion-body text-secondary">
+            <ul class="mb-0">
+              <li>Consulta de saldo en cuentas y tarjetas.</li>
+              <li>Detalle de movimientos recientes y por período.</li>
+              <li>Visualización de préstamos vigentes y cuotas pendientes.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#op2">
+            Pagos
+          </button>
+        </h2>
+        <div id="op2" class="accordion-collapse collapse" data-bs-parent="#accOperaciones">
+          <div class="accordion-body text-secondary">
+            <ul class="mb-0">
+              <li>Pago de servicios e impuestos adheridos.</li>
+              <li>Pago de tarjetas de crédito BALKFOX.</li>
+              <li>Programación de débitos automáticos recurrentes.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#op3">
+            Transferencias
+          </button>
+        </h2>
+        <div id="op3" class="accordion-collapse collapse" data-bs-parent="#accOperaciones">
+          <div class="accordion-body text-secondary">
+            <ul class="mb-0">
+              <li>Transferencias entre cuentas propias.</li>
+              <li>Transferencias a terceros BALKFOX.</li>
+              <li>Transferencias a otros bancos usando CBU o alias.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#op4">
+            Otras Operaciones
+          </button>
+        </h2>
+        <div id="op4" class="accordion-collapse collapse" data-bs-parent="#accOperaciones">
+          <div class="accordion-body text-secondary">
+            <ul class="mb-0">
+              <li>Solicitud y simulación de préstamos.</li>
+              <li>Gestión de tarjetas (alta, baja, bloqueo por robo o extravío).</li>
+              <li>Actualización de datos personales y de contacto.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Seguridad -->
+    <h2 class="text-center fw-bold mt-5 mb-4 reveal" id="seguridad">Seguridad y confianza BALKFOX</h2>
+
+    <div class="row g-3 reveal">
+      <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm">
+          <div class="card-body">
+            <div class="fw-bold mb-2">🔐 Cifrado y protección de datos</div>
+            <p class="text-secondary mb-0">
+              Todas las comunicaciones se realizan bajo protocolos seguros (HTTPS / TLS), con cifrado
+              de extremo a extremo para proteger usuarios, contraseñas y movimientos.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm">
+          <div class="card-body">
+            <div class="fw-bold mb-2">🧩 Autenticación y registros</div>
+            <p class="text-secondary mb-0">
+              Cada inicio de sesión se registra con fecha y hora, permitiendo auditar accesos y detectar
+              comportamientos inusuales. El sistema está preparado para integrar factores adicionales
+              de autenticación.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm">
+          <div class="card-body">
+            <div class="fw-bold mb-2">📡 Monitoreo y alertas</div>
+            <p class="text-secondary mb-0">
+              Los movimientos relevantes generan notificaciones internas, permitiendo al usuario
+              detectar operaciones no reconocidas y actuar rápidamente.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+ <p class="text-secondary">
+  Desde aquí podés iniciar sesión, registrar un nuevo usuario y operar desde la web de forma segura,
+  sin necesidad de aplicaciones móviles.
+</p>
+
+<div class="p-3 rounded-3 text-white mb-4 shadow-sm" style="background:#1d64f2; border:1px solid rgba(29,100,242,.25);">
+  <div style="font-size:.85rem; opacity:.9;">💡 Tip de seguridad</div>
+  <div class="fw-bold">Nunca compartas tus credenciales con terceros y cerrá sesión al finalizar.</div>
+</div>
+
+
+      <div class="col-lg-5">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body">
+            <h5 class="fw-bold mb-2">¿Necesitás ayuda?</h5>
+            <p class="text-secondary mb-2">
+              Ante cualquier duda sobre el uso del sistema, podés comunicarte con el equipo
+              desarrollador del proyecto o consultar las preguntas frecuentes.
+            </p>
+            <p class="mb-0">
+              <span class="fw-bold">Recomendación:</span>
+              <span class="text-secondary">si detectás un acceso o movimiento no reconocido,
+              cambiá tu contraseña de inmediato y cerrá sesión en todos los dispositivos.</span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Objetivos -->
+    <div class="card border-0 shadow-sm mt-4 reveal">
+      <div class="card-body p-4">
+        <h3 class="fw-bold mb-3">🎯 Objetivos Principales</h3>
+        <ul class="text-secondary mb-0">
+          <li>Registrar y administrar usuarios, asegurando acceso individual a sus datos.</li>
+          <li>Proteger información financiera con medidas de seguridad modernas.</li>
+          <li>Facilitar operaciones bancarias como pagos, transferencias y retiros.</li>
+          <li>Controlar préstamos, vencimientos y pagos pendientes.</li>
+          <li>Enviar alertas automáticas por movimientos o vencimientos.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Requerimientos -->
+    <div class="card border-0 shadow-sm mt-3 reveal">
+      <div class="card-body p-4">
+        <h3 class="fw-bold mb-3">🛠️ Requerimientos Funcionales</h3>
+
+        <div class="mb-3">
+          <div class="fw-bold border-start border-3 ps-2" style="border-color: var(--primario-oscuro) !important;">1. Autenticación y Seguridad</div>
+          <ul class="text-secondary mb-0">
+            <li>1.1 Registro de usuario.</li>
+            <li>1.2 Recuperación de credenciales.</li>
+          </ul>
+        </div>
+
+        <div class="mb-3">
+          <div class="fw-bold border-start border-3 ps-2" style="border-color: var(--primario-oscuro) !important;">2. Gestión de Cuentas</div>
+          <ul class="text-secondary mb-0">
+            <li>2.1 Consulta de saldo y movimientos.</li>
+            <li>2.2 Administración de cuentas.</li>
+            <li>2.3 Apertura y cierre de cuentas.</li>
+          </ul>
+        </div>
+
+        <div class="mb-3">
+          <div class="fw-bold border-start border-3 ps-2" style="border-color: var(--primario-oscuro) !important;">3. Transferencias y Pagos</div>
+          <ul class="text-secondary mb-0">
+            <li>3.1 Transferencias entre cuentas propias.</li>
+            <li>3.2 Transferencias a terceros.</li>
+            <li>3.3 Pagos de servicios.</li>
+            <li>3.4 Pagos de tarjetas de crédito.</li>
+            <li>3.5 Validación de CBU/alias.</li>
+          </ul>
+        </div>
+
+        <div class="mb-3">
+          <div class="fw-bold border-start border-3 ps-2" style="border-color: var(--primario-oscuro) !important;">4. Gestión de Tarjetas</div>
+          <ul class="text-secondary mb-0">
+            <li>4.1 Consulta de tarjetas.</li>
+            <li>4.2 Solicitud de nuevas tarjetas.</li>
+            <li>4.3 Habilitación y bloqueo de tarjetas.</li>
+          </ul>
+        </div>
+
+        <div class="mb-3">
+          <div class="fw-bold border-start border-3 ps-2" style="border-color: var(--primario-oscuro) !important;">5. Préstamos y Créditos</div>
+          <ul class="text-secondary mb-0">
+            <li>5.1 Solicitud de préstamos.</li>
+            <li>5.2 Seguimiento de préstamos.</li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="fw-bold border-start border-3 ps-2" style="border-color: var(--primario-oscuro) !important;">6. Notificaciones y Alertas</div>
+          <ul class="text-secondary mb-0">
+            <li>6.1 Alertas por movimientos.</li>
+            <li>6.2 Avisos de vencimiento.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- FAQ -->
+    <h3 class="fw-bold mt-5 mb-3 reveal">Preguntas frecuentes</h3>
+
+    <div class="accordion shadow-sm reveal" id="accFAQ">
+      <div class="accordion-item">
+        <h2 class="accordion-header">
+          <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1" aria-expanded="true">
+            ¿Qué necesito para usar BALKFOX Home Banking?
+          </button>
+        </h2>
+        <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#accFAQ">
+          <div class="accordion-body text-secondary">
+            Necesitás estar registrado como usuario del sistema. Desde esta misma página
+            podés crear tu usuario y luego iniciar sesión con tus credenciales.
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+            ¿Qué pasa si olvido mi contraseña?
+          </button>
+        </h2>
+        <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#accFAQ">
+          <div class="accordion-body text-secondary">
+            El sistema contempla un proceso de recuperación de credenciales. En el módulo
+            correspondiente se validan tus datos personales antes de permitir el cambio de clave.
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+            ¿Puedo operar las 24 horas?
+          </button>
+        </h2>
+        <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#accFAQ">
+          <div class="accordion-body text-secondary">
+            Sí. El objetivo de BALKFOX es que puedas consultar tus cuentas y operar en cualquier
+            momento, dentro de las políticas que defina la entidad que utilice el sistema.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+ <!-- Footer + Equipo con avatares (GENERADOS EN CÓDIGO) -->
+<footer class="py-5">
+  <div class="container">
+
+    <div class="text-center mb-4">
+      <div class="fw-bold">Equipo de diseño y desarrollo</div>
+    </div>
+
+    <div class="row g-3 justify-content-center">
+      <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body d-flex gap-3 align-items-center">
+            <img class="avatar" data-avatar="franco" alt="Franco Vega" />
+            <div>
+              <div class="fw-bold">Vega Franco Agustín</div>
+              <div class="text-secondary small">📞 3705036563</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body d-flex gap-3 align-items-center">
+            <img class="avatar" data-avatar="facu" alt="Facu Cáceres" />
+            <div>
+              <div class="fw-bold">Cáceres Facundo Matías</div>
+              <div class="text-secondary small">📞 3704324818</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body d-flex gap-3 align-items-center">
+            <img class="avatar" data-avatar="cesar" alt="Cesar" />
+            <div>
+              <div class="fw-bold">Candia César Alberto</div>
+              <div class="text-secondary small">📞 3718691099</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body d-flex gap-3 align-items-center">
+            <img class="avatar" data-avatar="roman" alt="Román" />
+            <div>
+              <div class="fw-bold">Román Mario Alfredo</div>
+              <div class="text-secondary small">📞 3704623179</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body d-flex gap-3 align-items-center">
+            <img class="avatar" data-avatar="traianon" alt="Traianon" />
+            <div>
+              <div class="fw-bold">Traianon Gustavo Alejandro</div>
+              <div class="text-secondary small">📞 3704300512</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-center mt-4 text-secondary small">
+      &copy; 2025 BALKFOX - Proyecto Académico de HomeBanking
+    </div>
+
+  </div>
+</footer>
+
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Reveal -->
+  <script>
+    const reveals = document.querySelectorAll(".reveal");
+    const obs = new IntersectionObserver(
+      entries => entries.forEach(e => {
+        if (e.isIntersecting) { e.target.classList.add("visible"); obs.unobserve(e.target); }
+      }),
+      { threshold: 0.12 }
+    );
+    reveals.forEach(el => obs.observe(el));
+
+    
+  </script>
+
+  <script>
+  // Convierte SVG a data URI seguro (sin depender de internet)
+  function svgToDataUri(svg) {
+    const encoded = encodeURIComponent(svg)
+      .replace(/'/g, "%27")
+      .replace(/"/g, "%22");
+    return `data:image/svg+xml;charset=utf-8,${encoded}`;
+  }
+
+  // Plantilla base de avatar (SVG) con opciones
+  function makeAvatar(opts) {
+    const {
+      skin, hair, hair2, shirt, jacket,
+      beard = false, glasses = false, hairStyle = "short"
+    } = opts;
+
+    // Hair shapes (simples pero “prolijos”)
+    const hairShort = `
+      <path d="M28 58c2-18 14-28 36-28s34 10 36 28c-10-10-21-14-36-14s-26 4-36 14z"
+            fill="${hair}" opacity="0.98"/>
+      <path d="M30 58c4-16 16-24 34-24s30 8 34 24c-8-8-18-12-34-12s-26 4-34 12z"
+            fill="${hair2}" opacity="0.65"/>
+    `;
+
+    const hairRound = `
+      <path d="M22 60c0-22 18-36 42-36s42 14 42 36c-10-14-24-18-42-18s-32 4-42 18z"
+            fill="${hair}" opacity="0.98"/>
+      <path d="M26 60c0-18 16-30 38-30s38 12 38 30c-8-10-20-14-38-14s-30 4-38 14z"
+            fill="${hair2}" opacity="0.65"/>
+    `;
+
+    const hairBookish = `
+      <path d="M24 58c1-18 15-30 40-30s39 12 40 30c-9-9-20-14-40-14S33 49 24 58z"
+            fill="${hair}" opacity="0.98"/>
+      <path d="M32 42c10-10 22-12 32-10 9 2 16 7 20 14-12-6-26-5-52-4z"
+            fill="${hair2}" opacity="0.75"/>
+      <path d="M52 30c8 0 14 3 18 8-6-2-12-2-18 0-6 2-12 7-18 14 1-14 8-22 18-22z"
+            fill="${hair}" opacity="0.95"/>
+    `;
+
+    const hairSvg =
+      hairStyle === "round" ? hairRound :
+      hairStyle === "bookish" ? hairBookish :
+      hairShort;
+
+    const glassesSvg = glasses ? `
+      <g opacity="0.9" stroke="#1f2a44" stroke-width="2.5" fill="none">
+        <circle cx="46" cy="70" r="10"/>
+        <circle cx="82" cy="70" r="10"/>
+        <path d="M56 70h16"/>
+      </g>
+    ` : "";
+
+    const beardSvg = beard ? `
+      <path d="M44 84c2 14 10 22 20 22s18-8 20-22c-6 4-12 6-20 6s-14-2-20-6z"
+            fill="#2a2a2a" opacity="0.95"/>
+      <path d="M40 82c2 18 12 30 24 30s22-12 24-30c-6 6-14 10-24 10s-18-4-24-10z"
+            fill="#1f1f1f" opacity="0.55"/>
+    ` : "";
+
+    // Avatar final (128x128)
+    return `
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <!-- fondo suave -->
+  <circle cx="64" cy="64" r="60" fill="#EAF1FF"/>
+  <circle cx="64" cy="64" r="58" fill="#ffffff" opacity="0.55"/>
+
+  <!-- cuello -->
+  <path d="M54 92c2 8 6 12 10 12s8-4 10-12" fill="${skin}" opacity="0.9"/>
+
+  <!-- ropa -->
+  <path d="M22 122c6-24 20-34 42-34s36 10 42 34" fill="${jacket}"/>
+  <path d="M44 92c6 8 10 12 20 12s14-4 20-12v30H44z" fill="${shirt}" opacity="0.98"/>
+
+  <!-- cabeza -->
+  <circle cx="64" cy="68" r="28" fill="${skin}"/>
+
+  <!-- cabello -->
+  ${hairSvg}
+
+  <!-- cejas -->
+  <path d="M44 62c6-4 12-4 18 0" stroke="#1f2a44" stroke-width="3" stroke-linecap="round" opacity="0.35"/>
+  <path d="M66 62c6-4 12-4 18 0" stroke="#1f2a44" stroke-width="3" stroke-linecap="round" opacity="0.35"/>
+
+  <!-- ojos -->
+  <circle cx="52" cy="70" r="3" fill="#1f2a44" opacity="0.9"/>
+  <circle cx="76" cy="70" r="3" fill="#1f2a44" opacity="0.9"/>
+
+  ${glassesSvg}
+
+  <!-- boca -->
+  <path d="M54 86c6 6 14 6 20 0" stroke="#1f2a44" stroke-width="3" stroke-linecap="round" opacity="0.55"/>
+
+  ${beardSvg}
+
+  <!-- brillo -->
+  <circle cx="50" cy="60" r="6" fill="#fff" opacity="0.18"/>
+</svg>
+    `.trim();
+  }
+
+  // Configuración de los 5 avatares (según lo que pediste)
+  const AVATARS = {
+    franco: makeAvatar({
+      skin:  "#8D5524",          // morocho
+      hair:  "#0B0F19",
+      hair2: "#1B2233",
+      shirt: "#F4F7FF",
+      jacket:"#0F2B5B",
+      beard: false,
+      glasses:false,
+      hairStyle:"short"
+    }),
+    facu: makeAvatar({
+      skin:  "#C68642",
+      hair:  "#3A2A1A",
+      hair2: "#5A4026",
+      shirt: "#2B6EF7",          // hoodie (simulado)
+      jacket:"#1B3F9B",
+      beard: false,
+      glasses:false,
+      hairStyle:"short"          // cabello corto
+    }),
+    cesar: makeAvatar({
+      skin:  "#D8A57A",
+      hair:  "#2C2A2A",
+      hair2: "#4A4747",
+      shirt: "#2A2F3A",          // sweater
+      jacket:"#1F2430",
+      beard: false,
+      glasses:false,
+      hairStyle:"round"          // cabello medio redondo
+    }),
+    roman: makeAvatar({
+      skin:  "#D9A67F",
+      hair:  "#202225",
+      hair2: "#3B3E45",
+      shirt: "#F1F5FF",
+      jacket:"#2B2F3A",          // blazer
+      beard: true,               // señor con barba
+      glasses:false,
+      hairStyle:"short"
+    }),
+    traianon: makeAvatar({
+      skin:  "#D8A57A",
+      hair:  "#4B2F1B",
+      hair2: "#6B4427",
+      shirt: "#E8EEF9",
+      jacket:"#3C4A66",          // cardigan
+      beard: false,
+      glasses:true,              // anteojos
+      hairStyle:"bookish"        // peinado de librito
+    })
+  };
+
+  // Pinta los avatares en todas las <img data-avatar="...">
+  document.querySelectorAll("img[data-avatar]").forEach(img => {
+    const key = img.getAttribute("data-avatar");
+    const svg = AVATARS[key];
+    if (svg) img.src = svgToDataUri(svg);
+  });
+</script>
+
+</body>
+</html>

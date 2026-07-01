@@ -1,0 +1,210 @@
+DROP DATABASE IF EXISTS HomeBanking;
+CREATE DATABASE HomeBanking;
+USE HomeBanking;
+
+-- 1. Tabla USUARIO
+CREATE TABLE USUARIO (
+  idUSUARIO INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  USUARIO_nombre VARCHAR(50),
+  USUARIO_apellido VARCHAR(45),
+  USUARIO_contrasena VARCHAR(100),
+  USUARIO_correo_direccion VARCHAR(100),
+  USUARIO_reset_token VARCHAR(255) NULL,
+  USUARIO_reset_expira DATETIME NULL
+);
+
+-- 2. Tabla LOGIN
+CREATE TABLE LOGIN (
+  idLOGIN INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  LOGIN_idUsuario INT,
+  LOGIN_estado ENUM('Activo','Inactivo'),
+  LOGIN_fecha_y_hora_de_acceso DATETIME,
+  FOREIGN KEY (LOGIN_idUsuario) REFERENCES USUARIO(idUSUARIO)
+);
+
+-- 3. Tabla PERSONA
+CREATE TABLE PERSONA (
+  idPERSONA INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  PERSONA_dni VARCHAR(20) NOT NULL,
+  PERSONA_domicilio VARCHAR(100),
+  PERSONA_telefono VARCHAR(20),
+  USUARIO_idUSUARIO INT,
+  FOREIGN KEY (USUARIO_idUSUARIO) REFERENCES USUARIO(idUSUARIO)
+);
+
+-- 4. Tabla CUENTA_BANCARIA
+CREATE TABLE CUENTA_BANCARIA (
+  idCUENTA_BANCARIA INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  CUENTA_BANCARIA_tipo_de_cuenta VARCHAR(45),
+  CUENTA_BANCARIA_numero_de_cuenta BIGINT,
+  CUENTA_BANCARIA_cbu BIGINT UNIQUE,
+  CUENTA_BANCARIA_alias VARCHAR(45) UNIQUE,
+  CUENTA_BANCARIA_saldo DECIMAL(10,2),
+  CUENTA_BANCARIA_estado ENUM('Activa','Inactiva'),
+  USUARIO_idUSUARIO INT,
+  LOGIN_idLOGIN INT,
+  FOREIGN KEY (USUARIO_idUSUARIO) REFERENCES USUARIO(idUSUARIO),
+  FOREIGN KEY (LOGIN_idLOGIN) REFERENCES LOGIN(idLOGIN)
+);
+
+-- 5. Tabla PRESTAMO (actualizada con clave foránea a USUARIO)
+CREATE TABLE PRESTAMO (
+  idPRESTAMO INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  PRESTAMO_cantidad_cuotas INT,
+  PRESTAMO_estado VARCHAR(20),
+  PRESTAMO_monto_solicitado DECIMAL(10,2),
+  PRESTAMO_monto_aprobado DECIMAL(10,2),
+  PRESTAMO_tipo_de_interes VARCHAR(45),
+  PRESTAMO_tipo_de_movimiento_prestamo VARCHAR(45),
+  USUARIO_idUSUARIO INT,
+  FOREIGN KEY (USUARIO_idUSUARIO) REFERENCES USUARIO(idUSUARIO)
+);
+
+-- 6. Tabla TARJETA
+CREATE TABLE TARJETA (
+  idTARJETA INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  numero_tarjeta VARCHAR(20) NOT NULL UNIQUE,
+  tipo_tarjeta ENUM('débito','crédito') NOT NULL,
+  estado ENUM('activa','inactiva','bloqueada') NOT NULL,
+  fecha_vencimiento DATE NOT NULL,
+  cvv VARCHAR(4) NOT NULL,
+  PERSONA_idPERSONA INT,
+  FOREIGN KEY (PERSONA_idPERSONA) REFERENCES PERSONA(idPERSONA)
+);
+
+-- 7. Tabla TRANSACCIONES
+CREATE TABLE TRANSACCIONES (
+  idTRANSACCIONES INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  TRANSACCIONES_monto DECIMAL(10,2),
+  TRANSACCIONES_moneda VARCHAR(10),
+  TRANSACCIONES_fecha_y_hora DATETIME,
+  TRANSACCIONES_cuenta_origen INT,
+  TRANSACCIONES_cuenta_destino INT,
+  TRANSACCIONES_descripcion VARCHAR(100),
+  TRANSACCIONES_tipo_de_movimiento VARCHAR(50),
+  TRANSACCIONES_estado VARCHAR(45),
+  TARJETA_idTARJETA INT,
+  PRESTAMO_idPRESTAMO INT,
+  FOREIGN KEY (TARJETA_idTARJETA) REFERENCES TARJETA(idTARJETA),
+  FOREIGN KEY (PRESTAMO_idPRESTAMO) REFERENCES PRESTAMO(idPRESTAMO)
+);
+
+-- 8. Tabla CUENTA_BANCARIA_TRANSACCIONES
+CREATE TABLE CUENTA_BANCARIA_TRANSACCIONES (
+  CUENTA_BANCARIA_idCUENTA_BANCARIA INT NOT NULL,
+  TRANSACCIONES_idTRANSACCIONES INT NOT NULL,
+  PRIMARY KEY (CUENTA_BANCARIA_idCUENTA_BANCARIA, TRANSACCIONES_idTRANSACCIONES),
+  FOREIGN KEY (CUENTA_BANCARIA_idCUENTA_BANCARIA) REFERENCES CUENTA_BANCARIA(idCUENTA_BANCARIA),
+  FOREIGN KEY (TRANSACCIONES_idTRANSACCIONES) REFERENCES TRANSACCIONES(idTRANSACCIONES)
+);
+
+-- 9. Tabla NOTIFICACIONES
+CREATE TABLE NOTIFICACIONES (
+  idNOTIFICACIONES INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  NOTIFICACIONES_mensaje VARCHAR(100),
+  NOTIFICACIONES_fecha_y_hora DATETIME,
+  NOTIFICACIONES_tipo_de_notificaciones VARCHAR(45),
+  NOTIFICACIONES_estado VARCHAR(45),
+  USUARIO_idUSUARIO INT,
+  LOGIN_idLOGIN INT,
+  FOREIGN KEY (USUARIO_idUSUARIO) REFERENCES USUARIO(idUSUARIO),
+  FOREIGN KEY (LOGIN_idLOGIN) REFERENCES LOGIN(idLOGIN)
+);
+
+-- 10. Tabla PAGO_DE_SERVICIOS
+CREATE TABLE PAGO_DE_SERVICIOS (
+  idPAGO INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  PAGO_DE_SERVICIOS_idcuenta INT,
+  PAGO_DE_SERVICIOS_monto DECIMAL(10,2),
+  PAGO_DE_SERVICIOS_fecha_de_pago DATETIME,
+  PAGO_DE_SERVICIOS_tipo_de_servicio VARCHAR(45),
+  CUENTA_BANCARIA_idCUENTA_BANCARIA INT,
+  FOREIGN KEY (CUENTA_BANCARIA_idCUENTA_BANCARIA) REFERENCES CUENTA_BANCARIA(idCUENTA_BANCARIA)
+);
+
+-- ==============================================
+-- INSERCIONES DE DATOS EN ORDEN
+
+INSERT INTO USUARIO (idUSUARIO, USUARIO_nombre, USUARIO_apellido, USUARIO_contrasena, USUARIO_correo_direccion) VALUES
+(1,'Juan','Pérez','clave123','juan.perez@email.com'),
+(2,'María','García','maria456','maria.garcia@email.com'),
+(3,'Carlos','López','carlos789','carlos.lopez@email.com'),
+(4,'Ana','Martínez','ana1234','ana.martinez@email.com'),
+(5,'Luis','Fernández','luispass','luis.fernandez@email.com'),
+(6,'Lucía','Ramírez','lucia321','lucia.ramirez@email.com'),
+(7,'Diego','Sánchez','diego456','diego.sanchez@email.com');
+
+INSERT INTO LOGIN (idLOGIN,LOGIN_idUsuario,LOGIN_estado,LOGIN_fecha_y_hora_de_acceso) VALUES
+(1,1,'Activo','2024-06-01 09:00:00'),
+(2,2,'Inactivo','2024-06-01 10:00:00'),
+(3,3,'Activo','2024-06-02 08:45:00'),
+(4,4,'Activo','2024-06-02 09:15:00'),
+(5,5,'Inactivo','2024-06-02 10:00:00'),
+(6,6,'Activo','2024-06-02 11:30:00'),
+(7,7,'Inactivo','2024-06-02 12:00:00');
+
+INSERT INTO PERSONA (PERSONA_dni,PERSONA_domicilio,PERSONA_telefono,USUARIO_idUSUARIO) VALUES
+('12345678','Av. Siempre Viva 123','3511234567',1),
+('23456789','Calle Falsa 456','3517654321',2),
+('34567890','Boulevard Central 789','3511122334',3),
+('45678901','Ruta Nacional 9 KM 20','3519988776',4),
+('56789012','Pasaje Secreto 101','3514455667',5),
+('67890123','Diagonal Norte 202','3515566778',6),
+('78901234','Camino de la Costa 303','3516677889',7);
+
+INSERT INTO CUENTA_BANCARIA (idCUENTA_BANCARIA, CUENTA_BANCARIA_tipo_de_cuenta, CUENTA_BANCARIA_numero_de_cuenta, CUENTA_BANCARIA_cbu, CUENTA_BANCARIA_alias, CUENTA_BANCARIA_saldo, CUENTA_BANCARIA_estado, USUARIO_idUSUARIO, LOGIN_idLOGIN) VALUES
+(1,'Caja de Ahorro',1001,1001001001,'juan.ahorro',15000.00,'Activa',1,1),
+(2,'Cuenta Corriente',1002,1001001002,'maria.cta',20000.00,'Activa',2,2),
+(3,'Caja de Ahorro',1003,1001001003,'carlos.ahorro',8000.00,'Activa',3,3),
+(4,'Cuenta Corriente',1004,1001001004,'ana.cta',30000.00,'Activa',4,4),
+(5,'Caja de Ahorro',1005,1001001005,'luis.ahorro',5000.00,'Activa',5,5),
+(6,'Cuenta Corriente',1006,1001001006,'lucia.cta',18000.00,'Activa',6,6),
+(7,'Caja de Ahorro',1007,1001001007,'diego.ahorro',12000.00,'Activa',7,7);
+
+INSERT INTO PRESTAMO (idPRESTAMO,PRESTAMO_cantidad_cuotas,PRESTAMO_estado,PRESTAMO_monto_solicitado,PRESTAMO_monto_aprobado,PRESTAMO_tipo_de_interes,PRESTAMO_tipo_de_movimiento_prestamo, USUARIO_idUSUARIO) VALUES
+(1,12,'Aprobado',50000.00,48000.00,'Fijo','Crédito',1),
+(2,6,'Pendiente',20000.00,0.00,'Variable','Crédito',2),
+(3,24,'Aprobado',100000.00,95000.00,'Fijo','Crédito',3),
+(4,12,'Pendiente',40000.00,0.00,'Variable','Crédito',4),
+(5,6,'Rechazado',15000.00,0.00,'Fijo','Crédito',5),
+(6,18,'Aprobado',75000.00,73000.00,'Variable','Crédito',6),
+(7,9,'Pendiente',30000.00,0.00,'Fijo','Crédito',7);
+
+INSERT INTO TARJETA (idTARJETA, numero_tarjeta, tipo_tarjeta, estado, fecha_vencimiento, cvv, PERSONA_idPERSONA) VALUES
+(1,'1234567890123456','crédito','activa','2026-12-31','123',1),
+(2,'9876543210987654','débito','activa','2025-06-30','456',2),
+(3,'1111222233334444','crédito','activa','2027-01-31','789',3),
+(4,'2222333344445555','débito','inactiva','2025-09-30','012',4),
+(5,'3333444455556666','crédito','activa','2026-03-31','345',5),
+(6,'4444555566667777','débito','activa','2025-12-31','678',6),
+(7,'5555666677778888','crédito','bloqueada','2026-06-30','901',7);
+
+INSERT INTO TRANSACCIONES (idTRANSACCIONES,TRANSACCIONES_monto,TRANSACCIONES_moneda,TRANSACCIONES_fecha_y_hora,TRANSACCIONES_cuenta_origen,TRANSACCIONES_cuenta_destino,TRANSACCIONES_descripcion,TRANSACCIONES_tipo_de_movimiento,TRANSACCIONES_estado,TARJETA_idTARJETA,PRESTAMO_idPRESTAMO) VALUES
+(1,1000.00,'ARS','2024-06-01 12:00:00',1001,1002,'Transferencia a María','Transferencia','Confirmado',1,1),
+(2,500.00,'ARS','2024-06-01 13:00:00',1002,1001,'Pago a Juan','Transferencia','Confirmado',2,NULL),
+(3,2000.00,'ARS','2024-06-02 14:00:00',1003,1004,'Pago a Ana','Transferencia','Confirmado',3,NULL),
+(4,300.00,'ARS','2024-06-02 15:00:00',1004,1005,'Pago de cuota','Débito Automático','Confirmado',4,3),
+(5,1000.00,'ARS','2024-06-02 16:30:00',1006,1003,'Transferencia recibida','Transferencia','Confirmado',6,NULL),
+(6,500.00,'USD','2024-06-02 17:00:00',1007,1001,'Giro internacional','Transferencia','Confirmado',7,NULL),
+(7,750.00,'ARS','2024-06-02 18:00:00',1005,1002,'Pago a María','Transferencia','Pendiente',5,NULL);
+
+INSERT INTO CUENTA_BANCARIA_TRANSACCIONES (CUENTA_BANCARIA_idCUENTA_BANCARIA,TRANSACCIONES_idTRANSACCIONES) VALUES
+(1,1),(2,2),(3,3),(4,4),(6,5),(7,6),(5,7);
+
+INSERT INTO NOTIFICACIONES (idNOTIFICACIONES,NOTIFICACIONES_mensaje,NOTIFICACIONES_fecha_y_hora,NOTIFICACIONES_tipo_de_notificaciones,NOTIFICACIONES_estado,USUARIO_idUSUARIO,LOGIN_idLOGIN) VALUES
+(1,'Transferencia realizada','2024-06-01 12:01:00','Transferencia','Leída',1,1),
+(2,'Nuevo préstamo aprobado','2024-06-01 14:00:00','Préstamo','No Leída',1,1),
+(3,'Pago recibido','2024-06-02 14:01:00','Transferencia','Leída',3,3),
+(4,'Tarjeta inactiva','2024-06-02 14:30:00','Tarjeta','No Leída',4,4),
+(5,'Préstamo rechazado','2024-06-02 15:15:00','Préstamo','Leída',5,5),
+(6,'Nuevo movimiento en tu cuenta','2024-06-02 16:00:00','Cuenta','No Leída',6,6),
+(7,'Transferencia en proceso','2024-06-02 16:30:00','Transferencia','No Leída',7,7);
+
+INSERT INTO PAGO_DE_SERVICIOS (idPAGO,PAGO_DE_SERVICIOS_idcuenta,PAGO_DE_SERVICIOS_monto,PAGO_DE_SERVICIOS_fecha_de_pago,PAGO_DE_SERVICIOS_tipo_de_servicio,CUENTA_BANCARIA_idCUENTA_BANCARIA) VALUES
+(1,1001,2500.00,'2024-06-01 15:00:00','Electricidad',1),
+(2,1002,3100.00,'2024-06-01 15:30:00','Internet',2),
+(3,1003,2200.00,'2024-06-02 13:00:00','Gas',3),
+(4,1004,1800.00,'2024-06-02 14:00:00','Agua',4),
+(5,1005,900.00,'2024-06-02 15:00:00','Teléfono',5),
+(6,1006,3000.00,'2024-06-02 16:00:00','Electricidad',6),
+(7,1007,1100.00,'2024-06-02 17:00:00','Internet',7);
